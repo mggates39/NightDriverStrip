@@ -64,6 +64,7 @@ class DeviceConfig : public IJSONSerializable
     bool use24HourClock;
     bool useCelsius;
     String ntpServer;
+    String stockTickerApiKey;
 
     std::vector<SettingSpec> settingSpecs;
     size_t writerIndex;
@@ -104,6 +105,7 @@ class DeviceConfig : public IJSONSerializable
     static constexpr const char * Use24HourClockTag = NAME_OF(use24HourClock);
     static constexpr const char * UseCelsiusTag = NAME_OF(useCelsius);
     static constexpr const char * NTPServerTag = NAME_OF(ntpServer);
+    static constexpr const char * StockTickerApiKeyTag = NAME_OF(stockTickerApiKey);
 
     DeviceConfig();
 
@@ -124,6 +126,7 @@ class DeviceConfig : public IJSONSerializable
         jsonDoc[Use24HourClockTag] = use24HourClock;
         jsonDoc[UseCelsiusTag] = useCelsius;
         jsonDoc[NTPServerTag] = ntpServer;
+        jsonDoc[StockTickerApiKeyTag] = stockTickerApiKey;
 
         if (includeSensitive)
             jsonDoc[OpenWeatherApiKeyTag] = openWeatherApiKey;
@@ -146,6 +149,7 @@ class DeviceConfig : public IJSONSerializable
         SetIfPresentIn(jsonObject, use24HourClock, Use24HourClockTag);
         SetIfPresentIn(jsonObject, useCelsius, UseCelsiusTag);
         SetIfPresentIn(jsonObject, ntpServer, NTPServerTag);
+        SetIfPresentIn(jsonObject, stockTickerApiKey, StockTickerApiKeyTag);
 
         if (ntpServer.isEmpty())
             ntpServer = DEFAULT_NTP_SERVER;
@@ -246,6 +250,18 @@ class DeviceConfig : public IJSONSerializable
     void SetNTPServer(const String &newNTPServer)
     {
         SetAndSave(ntpServer, newNTPServer);
+    }
+
+    const String &GetStockTickerAPIKey() const
+    {
+        return stockTickerApiKey;
+    }
+
+    ValidateResponse ValidateStockTickerAPIKey(const String &newStockTickerAPIKey);
+
+    void SetStockTickerAPIKey(const String &newStockTickerAPIKey)
+    {
+        SetAndSave(stockTickerApiKey, newStockTickerAPIKey);
     }
 
 };

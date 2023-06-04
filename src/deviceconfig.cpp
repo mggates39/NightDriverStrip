@@ -96,6 +96,12 @@ DeviceConfig::DeviceConfig()
         "The hostname or IP address of the NTP server to be used for time synchronization.",
         SettingSpec::SettingType::String
     );
+    settingSpecs.emplace_back(
+        NAME_OF(stockTickerApiKey),
+        "Stock Ticker API key",
+        "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Stock Ticker API provided by FinHub</a>.",
+        SettingSpec::SettingType::String
+    );
 
     writerIndex = g_ptrJSONWriter->RegisterWriter(
         [this]() { SaveToJSONFile(DEVICE_CONFIG_FILE, g_DeviceConfigJSONBufferSize, *this); }
@@ -121,6 +127,7 @@ DeviceConfig::DeviceConfig()
         use24HourClock = false;
         useCelsius = false;
         ntpServer = DEFAULT_NTP_SERVER;
+        stockTickerApiKey = cszStockTickerAPIKey;
 
         SetTimeZone(cszTimeZone, true);
 
@@ -193,6 +200,44 @@ DeviceConfig::ValidateResponse DeviceConfig::ValidateOpenWeatherAPIKey(const Str
             String message = "";
             if (jsonDoc.containsKey("message"))
                 message = jsonDoc["message"].as<String>();
+
+            http.end();
+            return { false, message };
+        }
+
+        // Anything else
+        default:
+        {
+            http.end();
+            return { false, "Unable to validate" };
+        }
+    }
+}
+
+DeviceConfig::ValidateResponse DeviceConfig::ValidateStockTickerAPIKey(const String &newStockTickerAPIKey)
+{
+    HTTPClient http;
+
+    String url = "https://finnhub.io/api/v1/quote?symbol=AAPL&token=" + urlEncode(newStockTickerAPIKey);
+
+    http.begin(url);
+
+    switch (http.GET())
+    {
+        case HTTP_CODE_OK:
+        {
+            http.end();
+            return { true, "" };
+        }
+
+        case HTTP_CODE_UNAUTHORIZED:
+        {
+            AllocatedJsonDocument jsonDoc(1024);
+            deserializeJson(jsonDoc, http.getString());
+
+            String message = "";
+            if (jsonDoc.containsKey("error"))
+                message = jsonDoc["error"].as<String>();
 
             http.end();
             return { false, message };
