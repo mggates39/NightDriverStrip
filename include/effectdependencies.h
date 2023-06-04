@@ -80,6 +80,7 @@
     #include "effects/matrix/PatternNoiseSmearing.h"
     #include "effects/matrix/PatternQR.h"
     #include "effects/matrix/PatternWeather.h"
+    #include "effects/matrix/PatternStockTicker.h"
 #endif
 
 #ifdef USESTRIP

@@ -336,6 +336,7 @@ void LoadEffectFactories()
         ADD_EFFECT(EFFECT_MATRIX_PONG_CLOCK, PatternPongClock);
         ADD_EFFECT(EFFECT_MATRIX_SUBSCRIBERS, PatternSubscribers);
         ADD_EFFECT(EFFECT_MATRIX_WEATHER, PatternWeather);
+        ADD_EFFECT(EFFECT_MATRIX_STOCK_TICKER, PatternStockTicker);
 
         ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE, GhostWave, "GhostWave", 0, 24, false);
         ADD_EFFECT(EFFECT_MATRIX_WAVEFORM, WaveformEffect, "WaveIn", 8);
