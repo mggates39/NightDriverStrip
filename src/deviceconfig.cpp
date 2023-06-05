@@ -109,6 +109,12 @@ DeviceConfig::DeviceConfig()
         "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Stock Ticker API provided by FinHub</a>.",
         SettingSpec::SettingType::String
     );
+    settingSpecs.emplace_back(
+        NAME_OF(stockTicker),
+        "Stock Ticker to Show",
+        "The valid Stock Ticker to show.  May be from any exchange.",
+        SettingSpec::SettingType::String
+    );
 
     writerIndex = g_ptrJSONWriter->RegisterWriter(
         [this]() { SaveToJSONFile(DEVICE_CONFIG_FILE, g_DeviceConfigJSONBufferSize, *this); }
