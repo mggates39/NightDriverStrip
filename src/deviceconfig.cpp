@@ -142,6 +142,7 @@ DeviceConfig::DeviceConfig()
         ntpServer = DEFAULT_NTP_SERVER;
         rememberCurrentEffect = false;
         stockTickerApiKey = cszStockTickerAPIKey;
+        stockTicker = cszStockTicker;
 
         SetTimeZone(cszTimeZone, true);
 
@@ -326,6 +327,8 @@ DeviceConfig::DeviceConfig()
         SetOpenWeatherAPIKey(cszOpenWeatherAPIKey);
         SetTimeZone(cszTimeZone);
         Set24HourClock(false);
+        SetStockTickerAPIKey(cszStockTickerAPIKey);
+        SetStockTicker(cszStockTicker);
 
         return;
     }
@@ -382,11 +385,28 @@ DeviceConfig::DeviceConfig()
     if (ESP_OK != err)
     {
         debugE("Coud not read use24HourClock from NVS: %s", esp_err_to_name(err));
-        SetLocationIsZip(false);
+        Set24HourClock(false);
     }
     else
-        SetLocationIsZip(use24HourClock, true);
+        Set24HourClock(use24HourClock);
 
+    err = nvs_get_str(nvsROHandle, NAME_OF(stockTickerApiKey), szBuffer, &len);
+    if (ESP_OK != err)
+    {
+        debugE("Coud not read Stock Ticker API Key from NVS: %s", esp_err_to_name(err));
+        SetStockTickerAPIKey(cszStockTickerAPIKey);
+    }
+    else
+        SetStockTickerAPIKey(szBuffer);
+
+    err = nvs_get_str(nvsROHandle, NAME_OF(stockTicker), szBuffer, &len);
+    if (ESP_OK != err)
+    {
+        debugE("Coud not read Stock Ticker from NVS: %s", esp_err_to_name(err));
+        SetStockTicker(cszStockTicker);
+    }
+    else
+        SetStockTicker(szBuffer);
 
     nvs_close(nvsROHandle);
 }
