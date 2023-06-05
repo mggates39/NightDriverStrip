@@ -360,6 +360,7 @@ void CWebServer::SetSettingsIfPresent(AsyncWebServerRequest * pRequest)
     PushPostParamIfPresent<bool>(pRequest, DeviceConfig::UseCelsiusTag, SET_VALUE(g_ptrDeviceConfig->SetUseCelsius(value)));
     PushPostParamIfPresent<String>(pRequest, DeviceConfig::NTPServerTag, SET_VALUE(g_ptrDeviceConfig->SetNTPServer(value)));
     PushPostParamIfPresent<bool>(pRequest, DeviceConfig::RememberCurrentEffectTag, SET_VALUE(g_ptrDeviceConfig->SetRememberCurrentEffect(value)));
+    PushPostParamIfPresent<String>(pRequest, DeviceConfig::StockTickerApiKeyTag, SET_VALUE(g_ptrDeviceConfig->SetStockTickerAPIKey(value)));
 }
 
 // Set settings and return resulting config
