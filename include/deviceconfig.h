@@ -66,7 +66,6 @@ class DeviceConfig : public IJSONSerializable
     String ntpServer;
     bool rememberCurrentEffect = false;
     String stockTickerApiKey;
-    String stockTicker;
 
     std::vector<SettingSpec> settingSpecs;
     size_t writerIndex;
@@ -109,7 +108,6 @@ class DeviceConfig : public IJSONSerializable
     static constexpr const char * NTPServerTag = NAME_OF(ntpServer);
     static constexpr const char * RememberCurrentEffectTag = NAME_OF(rememberCurrentEffect);
     static constexpr const char * StockTickerApiKeyTag = NAME_OF(stockTickerApiKey);
-    static constexpr const char * StockTickerTag = NAME_OF(stockTicker);
 
     DeviceConfig();
 
@@ -131,11 +129,11 @@ class DeviceConfig : public IJSONSerializable
         jsonDoc[UseCelsiusTag] = useCelsius;
         jsonDoc[NTPServerTag] = ntpServer;
         jsonDoc[RememberCurrentEffectTag] = rememberCurrentEffect;
-        jsonDoc[StockTickerApiKeyTag] = stockTickerApiKey;
-        jsonDoc[StockTickerTag] = stockTicker;
 
-        if (includeSensitive)
+        if (includeSensitive) {
             jsonDoc[OpenWeatherApiKeyTag] = openWeatherApiKey;
+            jsonDoc[StockTickerApiKeyTag] = stockTickerApiKey;
+        }
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
@@ -157,7 +155,6 @@ class DeviceConfig : public IJSONSerializable
         SetIfPresentIn(jsonObject, ntpServer, NTPServerTag);
         SetIfPresentIn(jsonObject, rememberCurrentEffect, RememberCurrentEffectTag);
         SetIfPresentIn(jsonObject, stockTickerApiKey, StockTickerApiKeyTag);
-        SetIfPresentIn(jsonObject, stockTicker, StockTickerTag);
 
         if (ntpServer.isEmpty())
             ntpServer = DEFAULT_NTP_SERVER;
@@ -280,16 +277,6 @@ class DeviceConfig : public IJSONSerializable
     void SetStockTickerAPIKey(const String &newStockTickerAPIKey)
     {
         SetAndSave(stockTickerApiKey, newStockTickerAPIKey);
-    }
-
-    const String &GetStockTicker() const
-    {
-        return stockTicker;
-    }
-
-    void SetStockTicker(const String &newStockTicker)
-    {
-        SetAndSave(stockTicker, newStockTicker);
     }
 
 };

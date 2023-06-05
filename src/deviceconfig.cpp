@@ -106,15 +106,9 @@ DeviceConfig::DeviceConfig()
     settingSpecs.emplace_back(
         NAME_OF(stockTickerApiKey),
         "Stock Ticker API key",
-        "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Stock Ticker API provided by FinHub</a>.",
+        "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Stock Ticker API provided by FinHub</a> (write only).",
         SettingSpec::SettingType::String
-    );
-    settingSpecs.emplace_back(
-        NAME_OF(stockTicker),
-        "Stock Ticker to Show",
-        "The valid Stock Ticker to show.  May be from any exchange.",
-        SettingSpec::SettingType::String
-    );
+    ).HasValidation = true;
 
     writerIndex = g_ptrJSONWriter->RegisterWriter(
         [this]() { SaveToJSONFile(DEVICE_CONFIG_FILE, g_DeviceConfigJSONBufferSize, *this); }
@@ -142,7 +136,6 @@ DeviceConfig::DeviceConfig()
         ntpServer = DEFAULT_NTP_SERVER;
         rememberCurrentEffect = false;
         stockTickerApiKey = cszStockTickerAPIKey;
-        stockTicker = cszStockTicker;
 
         SetTimeZone(cszTimeZone, true);
 
@@ -328,7 +321,6 @@ DeviceConfig::DeviceConfig()
         SetTimeZone(cszTimeZone);
         Set24HourClock(false);
         SetStockTickerAPIKey(cszStockTickerAPIKey);
-        SetStockTicker(cszStockTicker);
 
         return;
     }
@@ -398,15 +390,6 @@ DeviceConfig::DeviceConfig()
     }
     else
         SetStockTickerAPIKey(szBuffer);
-
-    err = nvs_get_str(nvsROHandle, NAME_OF(stockTicker), szBuffer, &len);
-    if (ESP_OK != err)
-    {
-        debugE("Coud not read Stock Ticker from NVS: %s", esp_err_to_name(err));
-        SetStockTicker(cszStockTicker);
-    }
-    else
-        SetStockTicker(szBuffer);
 
     nvs_close(nvsROHandle);
 }
