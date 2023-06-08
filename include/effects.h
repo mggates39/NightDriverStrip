@@ -105,7 +105,8 @@
 #define EFFECT_MATRIX_SPECTRUM_ANALYZER                132
 #define EFFECT_MATRIX_WAVEFORM                         133
 #define EFFECT_MATRIX_GHOST_WAVE                       134
-#define EFFECT_MATRIX_STOCK_TICKER                     135
+#define EFFECT_MATRIX_MAZE                             135
+#define EFFECT_MATRIX_STOCK_TICKER                     136
 
 // Starry Night star variations
 #define EFFECT_STAR                                      1
