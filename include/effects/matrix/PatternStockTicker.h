@@ -77,7 +77,7 @@ private:
 
     bool   dataReady         = false;
     bool   tickerChanged     = true;
-
+    std::vector<SettingSpec> mySettingSpecs;
     TaskHandle_t stockTask = nullptr;
     time_t latestUpdate      = 0;
 
@@ -248,27 +248,30 @@ private:
 public:
 
 
-    void construct()
+    virtual bool FillSettingSpecs() override
     {
-        _settingSpecs.emplace_back(
+        if (!LEDStripEffect::FillSettingSpecs())
+            return false;
+
+        mySettingSpecs.emplace_back(
             NAME_OF(stockTicker),
             "Stock Ticker to Show",
             "The valid Stock Ticker to show.  May be from any exchange.",
             SettingSpec::SettingType::String
         );
+        _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
+
+        return true;
     }
 
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_WEATHER, "Stock")
     {
-        construct();
     }
 
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
         if (jsonObject.containsKey("stk"))
             stockTicker = jsonObject["stk"].as<String>();
-
-        construct();
     }
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
