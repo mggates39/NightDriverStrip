@@ -236,6 +236,12 @@ class DeviceConfig : public IJSONSerializable
                 "from the same effect when restarted. Enabling this will lead to more wear on the flash chip of your device.",
                 SettingSpec::SettingType::Boolean
             );
+            settingSpecs.emplace_back(
+                NAME_OF(stockTickerApiKey),
+                "FinnHub Stock Ticker API key",
+                "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Finnhub API provided by Finnhub.io</a> (write only).",
+                SettingSpec::SettingType::String
+            ).HasValidation = true;
 
             settingSpecReferences.insert(settingSpecReferences.end(), settingSpecs.begin(), settingSpecs.end());
         }
