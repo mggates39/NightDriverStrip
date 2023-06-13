@@ -78,7 +78,7 @@ private:
     bool   dataReady         = false;
     bool   tickerChanged     = true;
     std::vector<SettingSpec> mySettingSpecs;
-    TaskHandle_t stockTask = nullptr;
+    size_t readerIndex = std::numeric_limits<size_t>::max();
     time_t latestUpdate      = 0;
 
 
@@ -211,19 +211,7 @@ private:
         }
     }
 
-    // Thread entry point so we can update the stock data asynchronously
-    static void StockTaskEntryPoint(LEDStripEffect &effect)
-    {
-        PatternStockTicker& stockEffect = static_cast<PatternStockTicker&>(effect);
 
-        for(;;)
-        {
-            // Suspend ourself until Draw() wakes us up
-            vTaskSuspend(NULL);
-
-            stockEffect.UpdateStock();
-        }
-    }
 
     void UpdateStock()
     {
@@ -274,6 +262,11 @@ public:
             stockTicker = jsonObject["stk"].as<String>();
     }
 
+    ~PatternStockTicker()
+    {
+        g_ptrNetworkReader->CancelReader(readerIndex);
+    }
+
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
         StaticJsonDocument<256> jsonDoc;
@@ -291,7 +284,7 @@ public:
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        stockTask = g_TaskManager.StartEffectThread(StockTaskEntryPoint, this, "Stock");
+        readerIndex = g_ptrNetworkReader->RegisterReader([this]() { UpdateStock(); });
 
         return true;
     }
@@ -319,9 +312,7 @@ public:
             latestUpdate = now;
 
             debugW("Triggering thread to check stock now...");
-            // Resume the stock task. If it's not suspended then there's an update running and this will do nothing,
-            //   so we'll silently skip the update this would otherwise trigger.
-            vTaskResume(stockTask);
+            g_ptrNetworkReader->FlagReader(readerIndex);
         }
 
 
