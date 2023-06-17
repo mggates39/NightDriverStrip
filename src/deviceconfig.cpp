@@ -264,7 +264,7 @@ DeviceConfig::DeviceConfig()
     err = nvs_get_str(nvsROHandle, NAME_OF(location), szBuffer, &len);
     if (ESP_OK != err)
     {
-        debugE("Coud not read location from NVS: %s", esp_err_to_name(err));
+        debugE("Could not read location from NVS: %s", esp_err_to_name(err));
         SetLocation(cszLocation);
     }
     else
@@ -283,7 +283,7 @@ DeviceConfig::DeviceConfig()
     err = nvs_get_str(nvsROHandle, NAME_OF(countryCode), szBuffer, &len);
     if (ESP_OK != err)
     {
-        debugE("Coud not read countryCode from NVS: %s", esp_err_to_name(err));
+        debugE("Could not read countryCode from NVS: %s", esp_err_to_name(err));
         SetCountryCode(cszCountryCode);
     }
     else
@@ -292,7 +292,7 @@ DeviceConfig::DeviceConfig()
     err = nvs_get_str(nvsROHandle, "_OWAK", szBuffer, &len);
     if (ESP_OK != err)
     {
-        debugE("Coud not read _OWAK from NVS: %s", esp_err_to_name(err));
+        debugE("Could not read _OWAK from NVS: %s", esp_err_to_name(err));
         SetOpenWeatherAPIKey(cszOpenWeatherAPIKey);
     }
     else
@@ -301,7 +301,7 @@ DeviceConfig::DeviceConfig()
     err = nvs_get_str(nvsROHandle, NAME_OF(timeZone), szBuffer, &len);
     if (ESP_OK != err)
     {
-        debugE("Coud not read timeZone from NVS: %s", esp_err_to_name(err));
+        debugE("Could not read timeZone from NVS: %s", esp_err_to_name(err));
         SetTimeZone(cszTimeZone);
     }
     else
@@ -311,7 +311,7 @@ DeviceConfig::DeviceConfig()
     err = nvs_get_u8(nvsROHandle, NAME_OF(use24HourClock), &use24HourClock);
     if (ESP_OK != err)
     {
-        debugE("Coud not read use24HourClock from NVS: %s", esp_err_to_name(err));
+        debugE("Could not read use24HourClock from NVS: %s", esp_err_to_name(err));
         Set24HourClock(false);
     }
     else
