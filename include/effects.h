@@ -106,7 +106,11 @@
 #define EFFECT_MATRIX_WAVEFORM                         133
 #define EFFECT_MATRIX_GHOST_WAVE                       134
 #define EFFECT_MATRIX_MAZE                             135
-#define EFFECT_MATRIX_STOCK_TICKER                     136
+#define EFFECT_MATRIX_SPECTRUMBAR                      136
+#define EFFECT_MATRIX_STOCK_TICKER                     137
+
+// Hexagon Effects
+#define EFFECT_HEXAGON_OUTER_RING                      201
 
 // Starry Night star variations
 #define EFFECT_STAR                                      1
@@ -150,5 +154,6 @@
 #define PTY_BLUR            "blr"
 #define PTY_FADE            "fde"
 #define PTY_VERSION         "ver"
+#define PTY_HUESTEP         "hst"
 
 #define EFFECTS_CONFIG_FILE "/effects.cfg"
