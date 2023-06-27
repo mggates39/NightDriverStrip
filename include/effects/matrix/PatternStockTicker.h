@@ -45,7 +45,6 @@
 #include "globals.h"
 #include "deviceconfig.h"
 #include "jsonserializer.h"
-#include <FontGfx_apple5x7.h>
 #include <thread>
 #include <map>
 #include "effects.h"
