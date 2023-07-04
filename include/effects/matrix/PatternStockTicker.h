@@ -53,16 +53,16 @@
 #define STOCK_CHECK_WIFI_WAIT 5000
 #define DEFAULT_STOCK_TICKER "APPL"
 
-class PatternStockTicker : public LEDStripEffect
+// All the data about a specific Stock Ticker
+class StockTicker
 {
-
-private:
-
-    String stockTicker       = DEFAULT_STOCK_TICKER;
+public:
+    String strSymbol         = "";
     String strCompanyName    = "";
     String strExchangeName   = "";
     String strCurrency       = "";
     String strLogoUrl        = "";
+
     float  marketCap         = 0.0f;
     float  sharesOutstanding = 0.0f;
 
@@ -74,6 +74,15 @@ private:
     float  openPrice         = 0.0f;
     float  prevClosePrice    = 0.0f;
     long   sampleTime        = 0l;
+  
+};
+
+class PatternStockTicker : public LEDStripEffect
+{
+
+private:
+
+    StockTicker ticker;
 
     bool   dataReady         = false;
     bool   tickerChanged     = true;
@@ -91,7 +100,7 @@ private:
 
     virtual size_t DesiredFramesPerSecond() const override
     {
-        return 25;
+        return 10;
     }
 
     virtual bool RequiresDoubleBuffering() const override
@@ -108,14 +117,14 @@ private:
             return false;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
-              "?symbol=" + urlEncode(stockTicker) + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
+              "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
 
         if (httpResponseCode <= 0)
         {
-            debugW("Error fetching data for company of for ticker: %s", stockTicker);
+            debugW("Error fetching data for company of for ticker: %s", ticker.strSymbol);
             http.end();
             return false;
         }
@@ -139,12 +148,12 @@ private:
         deserializeJson(doc, http.getString());
         JsonObject companyData =  doc.as<JsonObject>();
 
-        strCompanyName    = companyData["name"].as<String>();
-        strExchangeName   = companyData["exchange"].as<String>();
-        strCurrency       = companyData["currency"].as<String>();
-        strLogoUrl        = companyData["logo"].as<String>();
-        marketCap         = companyData["marketCapitalization"].as<float>();
-        sharesOutstanding = companyData["shareOutstanding"].as<float>();
+        ticker.strCompanyName    = companyData["name"].as<String>();
+        ticker.strExchangeName   = companyData["exchange"].as<String>();
+        ticker.strCurrency       = companyData["currency"].as<String>();
+        ticker.strLogoUrl        = companyData["logo"].as<String>();
+        ticker.marketCap         = companyData["marketCapitalization"].as<float>();
+        ticker.sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
         http.end();
 
@@ -160,7 +169,7 @@ private:
         HTTPClient http;
 
         String url = "https://finnhub.io/api/v1/quote"
-            "?symbol=" + stockTicker  + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
+            "?symbol=" + ticker.strSymbol  + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
         http.begin(url);
         int httpResponseCode = http.GET();
         if (httpResponseCode > 0)
@@ -182,30 +191,28 @@ private:
             deserializeJson(jsonDoc, http.getString());
             JsonObject stockData =  jsonDoc.as<JsonObject>();
 
-            strCompanyName    = stockData["name"].as<float>();
- 
             // Once we have a non-zero temp we can start displaying things
             if (0 < jsonDoc["c"])
                 dataReady = true;
 
 
-            currentPrice      = stockData["c"].as<float>();
-            change            = stockData["d"].as<float>();
-            percentChange     = stockData["dp"].as<float>();
-            highPrice         = stockData["h"].as<float>();
-            lowPrice          = stockData["l"].as<float>();
-            openPrice         = stockData["o"].as<float>();
-            prevClosePrice    = stockData["pc"].as<float>();
-            sampleTime        = stockData["t"].as<long>();
+            ticker.currentPrice      = stockData["c"].as<float>();
+            ticker.change            = stockData["d"].as<float>();
+            ticker.percentChange     = stockData["dp"].as<float>();
+            ticker.highPrice         = stockData["h"].as<float>();
+            ticker.lowPrice          = stockData["l"].as<float>();
+            ticker.openPrice         = stockData["o"].as<float>();
+            ticker.prevClosePrice    = stockData["pc"].as<float>();
+            ticker.sampleTime        = stockData["t"].as<long>();
 
-            debugI("Got ticker: Now %f Lo %f, Hi %f, Change %f", currentPrice, lowPrice, highPrice, change);
+            debugI("Got ticker: Now %f Lo %f, Hi %f, Change %f", ticker.currentPrice, ticker.lowPrice, ticker.highPrice, ticker.change);
 
             http.end();
             return true;
         }
         else
         {
-            debugW("Error fetching Stock data for Ticker: %s", stockTicker);
+            debugW("Error fetching Stock data for Ticker: %s", ticker.strSymbol);
             http.end();
             return false;
         }
@@ -254,12 +261,17 @@ public:
 
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
     {
+     
+        ticker.strSymbol         = DEFAULT_STOCK_TICKER;
     }
 
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
+            
+        ticker.strSymbol         = DEFAULT_STOCK_TICKER;
+
         if (jsonObject.containsKey("stk"))
-            stockTicker = jsonObject["stk"].as<String>();
+            ticker.strSymbol = jsonObject["stk"].as<String>();
     }
 
     ~PatternStockTicker()
@@ -274,7 +286,7 @@ public:
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
-        jsonDoc["stk"] = stockTicker;
+        jsonDoc["stk"] = ticker.strSymbol;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
@@ -322,18 +334,18 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showLocation = strCompanyName;
+        String showLocation = ticker.strCompanyName;
         showLocation.toUpperCase();
         if (g_ptrDeviceConfig->GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
         else
-            g()->print((strCompanyName.isEmpty() ? stockTicker : strCompanyName).substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+            g()->print((ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName).substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
 
         // Display the temperature, right-justified
 
         if (dataReady)
         {
-            String strTemp(currentPrice);
+            String strTemp(ticker.currentPrice);
             x = MATRIX_WIDTH - fontWidth * strTemp.length();
             g()->setCursor(x, y);
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
@@ -368,8 +380,8 @@ public:
         if (dataReady)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( highPrice);
-            String strLo( lowPrice);
+            String strHi( ticker.highPrice);
+            String strLo( ticker.lowPrice);
 
             // Draw today's HI and LO temperatures
 
@@ -384,8 +396,8 @@ public:
 
             // Draw tomorrow's HI and LO temperatures
 
-            strHi = String((int)openPrice);
-            strLo = String((int)prevClosePrice);
+            strHi = String((int)ticker.openPrice);
+            strLo = String((int)ticker.prevClosePrice);
             x = MATRIX_WIDTH - fontWidth * strHi.length();
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
@@ -404,14 +416,14 @@ public:
 
         LEDStripEffect::SerializeSettingsToJSON(jsonObject);
 
-        jsonDoc[NAME_OF(stockTicker)] = stockTicker;
+        jsonDoc[NAME_OF(stockTicker)] = ticker.strSymbol;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
     virtual bool SetSetting(const String& name, const String& value) override
     {
-        RETURN_IF_SET(name, NAME_OF(stockTicker), stockTicker, value);
+        RETURN_IF_SET(name, NAME_OF(stockTicker), ticker.strSymbol, value);
 
         return LEDStripEffect::SetSetting(name, value);
     }
