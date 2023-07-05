@@ -250,8 +250,8 @@ public:
 
         mySettingSpecs.emplace_back(
             NAME_OF(stockTicker),
-            "Stock Ticker to Show",
-            "The valid Stock Ticker to show.  May be from any exchange.",
+            "Stock Symbol to Show",
+            "The valid Stock Symbol to show.  May be from any exchange.",
             SettingSpec::SettingType::String
         );
         _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
@@ -328,28 +328,33 @@ public:
         }
 
 
-        // Print the town/city name
+        // Print the Company name
 
         int x = 0;
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showLocation = ticker.strCompanyName;
+        String showLocation = ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName;
         showLocation.toUpperCase();
         if (g_ptrDeviceConfig->GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
         else
-            g()->print((ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName).substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+            g()->print(showLocation.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
 
         // Display the temperature, right-justified
 
         if (dataReady)
         {
-            String strTemp(ticker.currentPrice);
-            x = MATRIX_WIDTH - fontWidth * strTemp.length();
+            String strPrice(ticker.currentPrice);
+            x = MATRIX_WIDTH - fontWidth * strPrice.length();
             g()->setCursor(x, y);
-            g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            g()->print(strTemp);
+            if (ticker.change > 0.0) {
+                g()->setTextColor(GREEN6);
+            } else if (ticker.change < 0.0) {
+                g()->setTextColor(RED16);
+            } else {
+                g()->setTextColor(WHITE16);
+            }                                                                                                                                                                                                                                                                                                                                      g()->print(strPrice);
         }
 
         // Draw the separator lines
