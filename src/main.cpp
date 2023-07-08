@@ -279,26 +279,20 @@ void PrintOutputHeader()
 
 void TerminateHandler()
 {
-    Serial.println("-------------------------------------------------------------------------------------");
-    Serial.println("- NightDriverStrip Guru Meditation                              Unhandled Exception -");
-    Serial.println("-------------------------------------------------------------------------------------");
+    debugE("-------------------------------------------------------------------------------------");
+    debugE("- NightDriverStrip Guru Meditation                              Unhandled Exception -");
+    debugE("-------------------------------------------------------------------------------------");
 
     PrintOutputHeader();
 
-/*
     try {
         std::rethrow_exception(std::current_exception());
     }
     catch (std::exception &ex) {
         debugE("Terminated due to exception: %s", ex.what());
     }
-*/
-    Serial.flush();
 
-    while(true)
-    {
-        sleep(1);
-    }
+    Serial.flush();
 }
 
 #ifdef TOGGLE_BUTTON_1
@@ -669,17 +663,14 @@ void loop()
         #endif
 
         #if ENABLE_OTA
-            EVERY_N_MILLIS(10)
+            try
             {
-                try
-                {
-                    if (WiFi.isConnected())
-                        ArduinoOTA.handle();
-                }
-                catch(const std::exception& e)
-                {
-                    debugW("Exception in OTA code caught");
-                }
+                if (WiFi.isConnected())
+                    ArduinoOTA.handle();
+            }
+            catch(const std::exception& e)
+            {
+                debugW("Exception in OTA code caught");
             }
         #endif
 
@@ -719,6 +710,10 @@ void loop()
             Serial.println(strOutput);
         }
 
-        delay(5);
+        // Once an update is underway, we loop tightly on ArduinoOTA.handle.  Otherwise we delay a bit to share the CPU.
+
+        
+        if (!g_bUpdateStarted)
+            delay(10);
     }
 }
