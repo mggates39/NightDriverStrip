@@ -341,7 +341,7 @@ public:
         else
             g()->print(showLocation.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
 
-        // Display the temperature, right-justified
+        // Display the Stock Price, right-justified
 
         if (dataReady)
         {
@@ -349,7 +349,7 @@ public:
             x = MATRIX_WIDTH - fontWidth * strPrice.length();
             g()->setCursor(x, y);
             if (ticker.change > 0.0) {
-                g()->setTextColor(GREEN6);
+                g()->setTextColor(GREEN16);
             } else if (ticker.change < 0.0) {
                 g()->setTextColor(RED16);
             } else {
