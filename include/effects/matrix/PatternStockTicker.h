@@ -53,7 +53,10 @@
 #define STOCK_CHECK_WIFI_WAIT 5000
 #define DEFAULT_STOCK_TICKER "APPL"
 
-// All the data about a specific Stock Ticker
+/**
+ * @brief All the data about a specific Stock Ticker
+ * 
+ */
 class StockTicker
 {
 public:
@@ -77,6 +80,10 @@ public:
   
 };
 
+/**
+ * @brief 
+ * 
+ */
 class PatternStockTicker : public LEDStripEffect
 {
 
@@ -90,24 +97,44 @@ private:
     size_t readerIndex = std::numeric_limits<size_t>::max();
     time_t latestUpdate      = 0;
 
-
-    // The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
-
+    /**
+     * @brief The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
+     * 
+     * @return true 
+     * @return false 
+     */
     virtual bool ShouldShowTitle() const
     {
         return false;
     }
 
+    /**
+     * @brief 
+     * 
+     * @return size_t 
+     */
     virtual size_t DesiredFramesPerSecond() const override
     {
         return 10;
     }
 
+    /**
+     * @brief 
+     * 
+     * @return true 
+     * @return false 
+     */
     virtual bool RequiresDoubleBuffering() const override
     {
         return false;
     }
 
+    /**
+     * @brief 
+     * 
+     * @return true 
+     * @return false 
+     */
     bool updateTickerCode()
     {
         HTTPClient http;
@@ -160,10 +187,12 @@ private:
         return true;
     }
 
-    // getStockData
-    //
-    // Get the current temp and the high and low for today
-
+    /**
+     * @brief Get the Stock Data object
+     * 
+     * @return true 
+     * @return false 
+     */
     bool getStockData()
     {
         HTTPClient http;
@@ -219,7 +248,10 @@ private:
     }
 
 
-
+    /**
+     * @brief 
+     * 
+     */
     void UpdateStock()
     {
         while(!WiFi.isConnected())
@@ -242,7 +274,12 @@ private:
 
 public:
 
-
+    /**
+     * @brief 
+     * 
+     * @return true 
+     * @return false 
+     */
     virtual bool FillSettingSpecs() override
     {
         if (!LEDStripEffect::FillSettingSpecs())
@@ -259,12 +296,21 @@ public:
         return true;
     }
 
+    /**
+     * @brief Construct a new Pattern Stock Ticker object
+     * 
+     */
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
     {
      
         ticker.strSymbol         = DEFAULT_STOCK_TICKER;
     }
 
+    /**
+     * @brief Construct a new Pattern Stock Ticker object
+     * 
+     * @param jsonObject 
+     */
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
             
@@ -274,11 +320,22 @@ public:
             ticker.strSymbol = jsonObject["stk"].as<String>();
     }
 
+    /**
+     * @brief Destroy the Pattern Stock Ticker object
+     * 
+     */
     ~PatternStockTicker()
     {
         g_ptrNetworkReader->CancelReader(readerIndex);
     }
 
+    /**
+     * @brief 
+     * 
+     * @param jsonObject 
+     * @return true 
+     * @return false 
+     */
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
         StaticJsonDocument<256> jsonDoc;
@@ -291,6 +348,13 @@ public:
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
+    /**
+     * @brief Initialize the LED Strip Effect class and register the Network Reader task
+     * 
+     * @param gfx 
+     * @return true 
+     * @return false 
+     */
     virtual bool Init(std::shared_ptr<GFXBase> gfx[NUM_CHANNELS]) override
     {
         if (!LEDStripEffect::Init(gfx))
@@ -301,6 +365,10 @@ public:
         return true;
     }
 
+    /**
+     * @brief Perform the actual drawing of the current stock ticker data
+     * 
+     */
     virtual void Draw() override
     {
         const int fontHeight = 7;
@@ -414,6 +482,13 @@ public:
         }
     }
 
+    /**
+     * @brief Update the JSON Object with our current setting values
+     * 
+     * @param jsonObject 
+     * @return true 
+     * @return false 
+     */
     virtual bool SerializeSettingsToJSON(JsonObject& jsonObject) override
     {
         StaticJsonDocument<256> jsonDoc;
@@ -426,6 +501,14 @@ public:
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
+    /**
+     * @brief Set the Setting object
+     * 
+     * @param name Name of setting
+     * @param value Value of setting
+     * @return true if setting name processed
+     * @return false if setting name unrecognized
+     */
     virtual bool SetSetting(const String& name, const String& value) override
     {
         RETURN_IF_SET(name, NAME_OF(stockTicker), ticker.strSymbol, value);
