@@ -351,5 +351,3 @@ class DeviceConfig : public IJSONSerializable
     }
 
 };
-
-extern DRAM_ATTR std::unique_ptr<DeviceConfig> g_ptrDeviceConfig;

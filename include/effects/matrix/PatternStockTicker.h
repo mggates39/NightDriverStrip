@@ -144,7 +144,7 @@ private:
             return false;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
-              "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
+              "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
@@ -198,7 +198,7 @@ private:
         HTTPClient http;
 
         String url = "https://finnhub.io/api/v1/quote"
-            "?symbol=" + ticker.strSymbol  + "&token=" + urlEncode(g_ptrDeviceConfig->GetStockTickerAPIKey());
+            "?symbol=" + ticker.strSymbol  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
         http.begin(url);
         int httpResponseCode = http.GET();
         if (httpResponseCode > 0)
@@ -326,7 +326,7 @@ public:
      */
     ~PatternStockTicker()
     {
-        g_ptrNetworkReader->CancelReader(readerIndex);
+        g_ptrSystem->NetworkReader().CancelReader(readerIndex);
     }
 
     /**
@@ -360,7 +360,7 @@ public:
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        readerIndex = g_ptrNetworkReader->RegisterReader([this]() { UpdateStock(); });
+        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this]() { UpdateStock(); });
 
         return true;
     }
@@ -392,7 +392,7 @@ public:
             latestUpdate = now;
 
             debugW("Triggering thread to check stock now...");
-            g_ptrNetworkReader->FlagReader(readerIndex);
+            g_ptrSystem->NetworkReader().FlagReader(readerIndex);
         }
 
 
@@ -404,7 +404,7 @@ public:
         g()->setTextColor(WHITE16);
         String showLocation = ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName;
         showLocation.toUpperCase();
-        if (g_ptrDeviceConfig->GetStockTickerAPIKey().isEmpty())
+        if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
         else
             g()->print(showLocation.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
