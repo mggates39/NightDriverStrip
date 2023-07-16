@@ -91,11 +91,13 @@ private:
 
     StockTicker ticker;
 
-    bool   dataReady         = false;
-    bool   tickerChanged     = true;
+
+    bool   dataReady            = false;
+    bool   stockChanged         = false;
+    String stockTickerList      = "";
+    size_t readerIndex          = std::numeric_limits<size_t>::max();
+    time_t latestUpdate         = 0;
     std::vector<SettingSpec> mySettingSpecs;
-    size_t readerIndex = std::numeric_limits<size_t>::max();
-    time_t latestUpdate      = 0;
 
     /**
      * @brief The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
@@ -140,8 +142,12 @@ private:
         HTTPClient http;
         String url;
 
-        if (!tickerChanged)
+        if (!stockChanged)
+        {
             return false;
+        }
+
+        ticker.strSymbol = stockTickerList;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
               "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
@@ -264,11 +270,11 @@ private:
 
         if (getStockData())
         {
-            debugW("Got today's stock");
+            debugW("Got Stock Data");
         }
         else
         {
-            debugW("Failed to get today's stock");
+            debugW("Failed to get Stock Data");
         }
     }
 
@@ -286,9 +292,9 @@ public:
             return false;
 
         mySettingSpecs.emplace_back(
-            NAME_OF(stockTicker),
-            "Stock Symbol to Show",
-            "The valid Stock Symbol to show.  May be from any exchange.",
+            NAME_OF(stockTickerList),
+            "Stock Symbols to Show",
+            "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
             SettingSpec::SettingType::String
         );
         _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
@@ -303,7 +309,8 @@ public:
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
     {
      
-        ticker.strSymbol         = DEFAULT_STOCK_TICKER;
+        stockTickerList  = DEFAULT_STOCK_TICKER;
+        stockChanged     = true;
     }
 
     /**
@@ -314,10 +321,12 @@ public:
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
             
-        ticker.strSymbol         = DEFAULT_STOCK_TICKER;
+        stockTickerList  = DEFAULT_STOCK_TICKER;
 
-        if (jsonObject.containsKey("stk"))
-            ticker.strSymbol = jsonObject["stk"].as<String>();
+        if (jsonObject.containsKey("stk")) {
+            stockTickerList = jsonObject["stk"].as<String>();
+        }
+        stockChanged     = true;
     }
 
     /**
@@ -343,7 +352,7 @@ public:
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
-        jsonDoc["stk"] = ticker.strSymbol;
+        jsonDoc["stk"] = stockTickerList;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
@@ -402,12 +411,12 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showLocation = ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName;
-        showLocation.toUpperCase();
+        String showCompany = ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName;
+        showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
         else
-            g()->print(showLocation.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+            g()->print(showCompany.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
 
         // Display the Stock Price, right-justified
 
@@ -496,13 +505,13 @@ public:
 
         LEDStripEffect::SerializeSettingsToJSON(jsonObject);
 
-        jsonDoc[NAME_OF(stockTicker)] = ticker.strSymbol;
+        jsonDoc[NAME_OF(stockTickerList)] = stockTickerList;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
     /**
-     * @brief Set the Setting object
+     * @brief Set the Setting for this object
      * 
      * @param name Name of setting
      * @param value Value of setting
@@ -511,7 +520,11 @@ public:
      */
     virtual bool SetSetting(const String& name, const String& value) override
     {
-        RETURN_IF_SET(name, NAME_OF(stockTicker), ticker.strSymbol, value);
+        if (name == NAME_OF(stockTickerList) && stockTickerList != value) {
+            stockChanged = true;
+            dataReady = false;
+        }
+        RETURN_IF_SET(name, NAME_OF(stockTickerList), stockTickerList, value);
 
         return LEDStripEffect::SetSetting(name, value);
     }
