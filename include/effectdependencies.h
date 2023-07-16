@@ -84,6 +84,6 @@
     #include "effects/matrix/PatternStockTicker.h"
 #endif
 
-#ifdef USESTRIP
+#ifdef USE_STRIP
     #include "ledstripgfx.h"
 #endif
