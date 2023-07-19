@@ -134,6 +134,29 @@ private:
     /**
      * @brief 
      * 
+     * @param newSymbols 
+     * @return int 
+     */
+    int ParseTickerSymbols(String newSymbols)
+    {
+        char *ptr;
+        const int length = newSymbols.length();
+        char *str = new char[length + 1];
+        strcpy(str, newSymbols.c_str());
+        int n = 0;
+        ptr = strtok(str, ",");
+        while (ptr != NULL)
+        {
+            n++;
+            // cout << ptr  << endl;
+            ptr = strtok (NULL, ",");
+        }
+        return n;
+    }
+
+    /**
+     * @brief 
+     * 
      * @return true 
      * @return false 
      */
@@ -520,7 +543,8 @@ public:
      */
     virtual bool SetSetting(const String& name, const String& value) override
     {
-        if (name == NAME_OF(stockTickerList) && stockTickerList != value) {
+        if (name == NAME_OF(stockTickerList) && stockTickerList != value)
+        {
             stockChanged = true;
             dataReady = false;
         }
