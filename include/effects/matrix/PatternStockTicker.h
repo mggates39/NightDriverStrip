@@ -60,11 +60,10 @@
 class StockTicker
 {
 public:
-    String strSymbol         = "";
-    String strCompanyName    = "";
-    String strExchangeName   = "";
-    String strCurrency       = "";
-    String strLogoUrl        = "";
+    char strSymbol[12];
+    char strCompanyName[32];
+    char strExchangeName[16];
+    char strCurrency[16];
 
     float  marketCap         = 0.0f;
     float  sharesOutstanding = 0.0f;
@@ -170,7 +169,7 @@ private:
             return false;
         }
 
-        ticker.strSymbol = stockTickerList;
+        strcpy(ticker.strSymbol, stockTickerList.c_str());
 
         url = "https://finnhub.io/api/v1/stock/profile2"
               "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
@@ -204,10 +203,9 @@ private:
         deserializeJson(doc, http.getString());
         JsonObject companyData =  doc.as<JsonObject>();
 
-        ticker.strCompanyName    = companyData["name"].as<String>();
-        ticker.strExchangeName   = companyData["exchange"].as<String>();
-        ticker.strCurrency       = companyData["currency"].as<String>();
-        ticker.strLogoUrl        = companyData["logo"].as<String>();
+        strcpy(ticker.strCompanyName, companyData["name"]);
+        strcpy(ticker.strExchangeName, companyData["exchange"]);
+        strcpy(ticker.strCurrency, companyData["currency"]);
         ticker.marketCap         = companyData["marketCapitalization"].as<float>();
         ticker.sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
