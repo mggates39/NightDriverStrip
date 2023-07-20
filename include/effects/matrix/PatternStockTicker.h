@@ -223,9 +223,10 @@ private:
     bool getStockData()
     {
         HTTPClient http;
+        String tickerValue = ticker.strSymbol;
 
         String url = "https://finnhub.io/api/v1/quote"
-            "?symbol=" + ticker.strSymbol  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+            "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
         http.begin(url);
         int httpResponseCode = http.GET();
         if (httpResponseCode > 0)
@@ -432,7 +433,7 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showCompany = ticker.strCompanyName.isEmpty() ? ticker.strSymbol : ticker.strCompanyName;
+        String showCompany = strlen(ticker.strCompanyName) == 0 ? ticker.strSymbol : ticker.strCompanyName;
         showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
