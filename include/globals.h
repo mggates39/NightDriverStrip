@@ -137,9 +137,10 @@
 #define FLASH_VERSION_NAME_X(x) "v"#x
 #define FLASH_VERSION_NAME XSTR(FLASH_VERSION)
 
-#define FASTLED_INTERNAL        1   // Silence FastLED build banners
-#define NTP_DELAY_COUNT         20  // delay count for ntp update
-#define NTP_PACKET_LENGTH       48  // ntp packet length
+#define FASTLED_INTERNAL        1       // Silence FastLED build banners
+#define NTP_DELAY_SECONDS       30*60   // delay count for NTP update, in seconds
+#define NTP_DELAY_ERROR_SECONDS 30      // delay count for NTP updates if no time was set, in seconds
+#define NTP_PACKET_LENGTH       48      // ntp packet length
 
 // C Helpers and Macros
 
@@ -1234,7 +1235,7 @@ extern RemoteDebug Debug;           // Let everyone in the project know about it
 #endif
 
 #ifndef MATRIX_REFRESH_RATE
-#define MATRIX_REFRESH_RATE 120
+#define MATRIX_REFRESH_RATE 100
 #endif
 
 #ifndef MATRIX_CALC_DIVIDER
@@ -1477,21 +1478,24 @@ inline String str_sprintf(const char *fmt, ...)
 //
 // Simple inline utility functions like random numbers, mapping, conversion, etc
 
-inline static float randomfloat(float lower, float upper)
-{
-    float result = (lower + ((upper - lower) * rand()) / RAND_MAX);
-    return result;
-}
+#include <random>
+#include <type_traits>
 
-inline static double randomdouble(double lower, double upper)
+template <typename T>
+inline static T random_range(T lower, T upper)
 {
-    double result = (lower + ((upper - lower) * rand()) / (double)RAND_MAX);
-    return result;
-}
+    static_assert(std::is_arithmetic<T>::value, "Template argument must be numeric type");
 
-template<typename T> inline float map(T x, T in_min, T in_max, T out_min, T out_max)
-{
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    static std::random_device rd; 
+    static std::mt19937 gen(rd());
+
+    if constexpr (std::is_integral<T>::value) {
+        std::uniform_int_distribution<T> distrib(lower, upper);
+        return distrib(gen);
+    } else if constexpr (std::is_floating_point<T>::value) {
+        std::uniform_real_distribution<T> distrib(lower, upper);
+        return distrib(gen);
+    }
 }
 
 inline uint64_t ULONGFromMemory(uint8_t * payloadData)

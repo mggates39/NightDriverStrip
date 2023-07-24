@@ -440,7 +440,7 @@ public:
     {
       if (g_Analyzer._VURatio > 1.5)
       {
-        if (randomfloat(1.0, 3.0) < g_Analyzer._VURatio)
+        if (random_range(1.0, 3.0) < g_Analyzer._VURatio)
         {
           latch = false;
           OnBeat();
@@ -449,8 +449,6 @@ public:
     }
   }
 };
-
-extern void ShowTM1814();
 
 class CountEffect : public LEDStripEffect
 {
@@ -479,11 +477,8 @@ class CountEffect : public LEDStripEffect
         if (t >= OPEN_LEN)
           t -= OPEN_LEN;
       }
-#if ATOMISTRING
-      ShowTM1814();
-#else
+
       FastLED.show();
-#endif
     }
   }
 
@@ -750,7 +745,7 @@ public:
         CRGB c = ColorFromPalette(_Palette, 255.0 * q / FAN_SIZE, 255, NOBLEND);
         if (_bReplaceMagenta && c == CRGB(CRGB::Magenta))
           c = CRGB(CHSV(beatsin8(2, 0, 255), 255, 255));
-        if (randomfloat(0, 1) < _sparkleChance)
+        if (random_range(0.0f, 10.f) < _sparkleChance)
           c = CRGB::White;
         DrawFanPixels(x, 1, c, Sequential, i);
       }
