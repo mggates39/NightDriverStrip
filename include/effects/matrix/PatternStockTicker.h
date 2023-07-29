@@ -464,21 +464,6 @@ public:
         g()->drawLine(xHalf, y, xHalf, MATRIX_HEIGHT-1, CRGB(0,0,128));
         y+=2 + fontHeight;
 
-        // Figure out which day of the week it is
-
-        time_t today = time(nullptr);
-        tm * todayTime = localtime(&today);
-        const char * pszToday = pszDaysOfWeek[todayTime->tm_wday];
-        const char * pszTomorrow = pszDaysOfWeek[ (todayTime->tm_wday + 1) % 7 ];
-
-        // Draw the day of the week and tomorrow's day as well
-
-        g()->setTextColor(WHITE16);
-        g()->setCursor(0, MATRIX_HEIGHT);
-        g()->print(pszToday);
-        g()->setCursor(xHalf+2, MATRIX_HEIGHT);
-        g()->print(pszTomorrow);
-
         // Draw the temperature in lighter white
 
         if (dataReady)
