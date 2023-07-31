@@ -104,7 +104,7 @@ private:
      * @return true 
      * @return false 
      */
-    virtual bool ShouldShowTitle() const
+    bool ShouldShowTitle() const
     {
         return false;
     }
@@ -114,7 +114,7 @@ private:
      * 
      * @return size_t 
      */
-    virtual size_t DesiredFramesPerSecond() const override
+    size_t DesiredFramesPerSecond() const override
     {
         return 10;
     }
@@ -125,7 +125,7 @@ private:
      * @return true 
      * @return false 
      */
-    virtual bool RequiresDoubleBuffering() const override
+    bool RequiresDoubleBuffering() const override
     {
         return false;
     }
@@ -308,7 +308,7 @@ public:
      * @return true 
      * @return false 
      */
-    virtual bool FillSettingSpecs() override
+    bool FillSettingSpecs() override
     {
         if (!LEDStripEffect::FillSettingSpecs())
             return false;
@@ -367,7 +367,7 @@ public:
      * @return true 
      * @return false 
      */
-    virtual bool SerializeToJSON(JsonObject& jsonObject) override
+    bool SerializeToJSON(JsonObject& jsonObject) override
     {
         StaticJsonDocument<256> jsonDoc;
 
@@ -386,7 +386,7 @@ public:
      * @return true 
      * @return false 
      */
-    virtual bool Init(std::vector<std::shared_ptr<GFXBase>>& gfx) override
+    bool Init(std::vector<std::shared_ptr<GFXBase>>& gfx) override
     {
         if (!LEDStripEffect::Init(gfx))
             return false;
@@ -400,7 +400,7 @@ public:
      * @brief Perform the actual drawing of the current stock ticker data
      * 
      */
-    virtual void Draw() override
+    void Draw() override
     {
         const int fontHeight = 7;
         const int fontWidth  = 5;
@@ -505,7 +505,7 @@ public:
      * @return true 
      * @return false 
      */
-    virtual bool SerializeSettingsToJSON(JsonObject& jsonObject) override
+    bool SerializeSettingsToJSON(JsonObject& jsonObject) override
     {
         StaticJsonDocument<256> jsonDoc;
         auto rootObject = jsonDoc.to<JsonObject>();
@@ -525,7 +525,7 @@ public:
      * @return true if setting name processed
      * @return false if setting name unrecognized
      */
-    virtual bool SetSetting(const String& name, const String& value) override
+    bool SetSetting(const String& name, const String& value) override
     {
         if (name == NAME_OF(stockTickerList) && stockTickerList != value)
         {
