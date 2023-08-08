@@ -84,6 +84,6 @@
     #include "effects/matrix/PatternStockTicker.h"
 #endif
 
-#ifdef USE_NEOPIXEL
+#ifdef USE_WS281X
     #include "ledstripgfx.h"
 #endif
