@@ -49,9 +49,13 @@
 #include <map>
 #include "effects.h"
 
-#define STOCK_INTERVAL_SECONDS (10*60)
-#define STOCK_CHECK_WIFI_WAIT 5000
+// Default stock Ticker code Apple 
 #define DEFAULT_STOCK_TICKER "APPL"
+
+// Update stocks every 1 minute, retry after 30 seconds on error, and check other things every 5 seconds
+#define STOCK_CHECK_INTERVAL        (1 * 60000)
+#define STOCK_CHECK_ERROR_INTERVAL  30000
+#define STOCK_READER_INTERVAL       5000
 
 /**
  * @brief All the data about a specific Stock Ticker
@@ -285,7 +289,7 @@ private:
         while(!WiFi.isConnected())
         {
             debugI("Delaying Stock update, waiting for WiFi...");
-            vTaskDelay(pdMS_TO_TICKS(STOCK_CHECK_WIFI_WAIT));
+            vTaskDelay(pdMS_TO_TICKS(STOCK_CHECK_ERROR_INTERVAL));
         }
 
         updateTickerCode();
@@ -391,7 +395,7 @@ public:
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this]() { UpdateStock(); });
+        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { UpdateStock(); }, STOCK_READER_INTERVAL, true);
 
         return true;
     }
@@ -418,7 +422,7 @@ public:
 
         // If location and/or country have changed, trigger an update regardless of timer, but
         // not more than once every half a minute
-        if (secondsSinceLastUpdate >= STOCK_INTERVAL_SECONDS)
+        if (secondsSinceLastUpdate >= STOCK_CHECK_INTERVAL)
         {
             latestUpdate = now;
 
