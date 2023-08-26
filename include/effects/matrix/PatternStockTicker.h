@@ -59,6 +59,8 @@
 
 /**
  * @brief All the data about a specific Stock Ticker
+ * Stored as a circular linked list so that the draw code
+ * can easily move from one to the next
  * 
  */
 class StockTicker
@@ -80,6 +82,7 @@ public:
     float  openPrice         = 0.0f;
     float  prevClosePrice    = 0.0f;
     long   sampleTime        = 0l;
+    StockTicker* next        = NULL;
   
 };
 
