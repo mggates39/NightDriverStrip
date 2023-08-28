@@ -269,7 +269,7 @@ extern RemoteDebug Debug;           // Let everyone in the project know about it
     #define ENABLE_OTA              0   // Accept over the air flash updates
 
     #if M5STICKC || M5STICKCPLUS || M5STACKCORE2
-        #define LED_PIN0 32
+        #define LED_PIN0 26
     #elif LILYGOTDISPLAYS3
         #define LED_PIN0 21
     #else
