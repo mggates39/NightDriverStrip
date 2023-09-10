@@ -127,14 +127,13 @@ private:
     }
 
     /**
-     * @brief 
+     * @brief Does this effect need double buffering>
      * 
      * @return true 
-     * @return false 
      */
     bool RequiresDoubleBuffering() const override
     {
-        return false;
+        return true;
     }
 
     /**
