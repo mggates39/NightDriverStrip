@@ -23,7 +23,7 @@
 //
 // Description:
 //
-//   Gets the Stock Data for a given Ticker Code
+//   Gets the Stock Data for a given set of Ticker Symbols
 //
 // History:     Jun-04-2023         Gatesm      Adapted from Weather code
 //
@@ -100,7 +100,7 @@ private:
 
     bool   dataReady            = false;
     bool   stockChanged         = false;
-    String stockTickerList      = "";
+    String stockTickerList      = DEFAULT_STOCK_TICKER;
     size_t readerIndex          = std::numeric_limits<size_t>::max();
     time_t latestUpdate         = 0;
     std::vector<SettingSpec> mySettingSpecs;
