@@ -1,1 +1,2 @@
-const httpPrefix="http://192.168.2.8";
+const httpPrefix = process.env.NODE_ENV === "development" ? "http://255.255.255.0" : undefined;
+export default httpPrefix;
