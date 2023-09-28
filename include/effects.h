@@ -120,7 +120,6 @@
 #define EFFECT_MATRIX_GHOST_WAVE                       134
 #define EFFECT_MATRIX_MAZE                             135
 #define EFFECT_MATRIX_SPECTRUMBAR                      136
-#define EFFECT_MATRIX_STOCK_TICKER                     137
 
 #define EFFECT_MATRIX_SM2DDPR                          137
 #define EFFECT_MATRIX_SMAMBERRAIN                      138
@@ -143,6 +142,8 @@
 #define EFFECT_MATRIX_SMSUPERNOVA                      155
 #define EFFECT_MATRIX_SMTWISTER                        156
 #define EFFECT_MATRIX_SMWALKING_MACHINE                157
+
+#define EFFECT_MATRIX_STOCK_TICKER                     158
 
 // Hexagon Effects
 #define EFFECT_HEXAGON_OUTER_RING                      201
