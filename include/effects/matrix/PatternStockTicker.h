@@ -103,7 +103,7 @@ private:
     String stockTickerList      = DEFAULT_STOCK_TICKER;
     size_t readerIndex          = std::numeric_limits<size_t>::max();
     time_t latestUpdate         = 0;
-    std::vector<SettingSpec> mySettingSpecs;
+    static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
     /**
      * @brief The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
@@ -319,12 +319,18 @@ public:
         if (!LEDStripEffect::FillSettingSpecs())
             return false;
 
-        mySettingSpecs.emplace_back(
-            NAME_OF(stockTickerList),
-            "Stock Symbols to Show",
-            "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
-            SettingSpec::SettingType::String
-        );
+        // Lazily load this class' SettingSpec instances if they haven't been already
+        if (mySettingSpecs.size() == 0)
+        {
+            mySettingSpecs.emplace_back(
+                NAME_OF(stockTickerList),
+                "Stock Symbols to Show",
+                "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
+                SettingSpec::SettingType::String
+            );
+        }
+
+        // Add our SettingSpecs reference_wrappers to the base set provided by LEDStripEffect
         _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
 
         return true;
