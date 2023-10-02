@@ -52,8 +52,8 @@
 // Default stock Ticker code Apple 
 #define DEFAULT_STOCK_TICKER "APPL"
 
-// Update stocks every 1 minute, retry after 30 seconds on error, and check other things every 5 seconds
-#define STOCK_CHECK_INTERVAL        (1 * 60000)
+// Update stocks every 10 minutes, retry after 30 seconds on error, and check other things every 5 seconds
+#define STOCK_CHECK_INTERVAL        (10 * 60000)
 #define STOCK_CHECK_ERROR_INTERVAL  30000
 #define STOCK_READER_INTERVAL       5000
 
