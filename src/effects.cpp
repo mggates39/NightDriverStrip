@@ -117,6 +117,7 @@
 
 #if USE_HUB75 && ENABLE_WIFI
     std::vector<SettingSpec, psram_allocator<SettingSpec>> PatternSubscribers::mySettingSpecs = {};
+    std::vector<SettingSpec, psram_allocator<SettingSpec>> PatternStockTicker::mySettingSpecs = {};
 #endif
 
 // Effect factories for the StarryNightEffect - one per star type
