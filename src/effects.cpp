@@ -105,6 +105,7 @@
     #include "effects/matrix/PatternQR.h"
 #if ENABLE_WIFI
     #include "effects/matrix/PatternWeather.h"
+    #include "effects/matrix/PatternStockTicker.h"
 #endif
 #endif  // USE_HUB75
 
