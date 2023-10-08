@@ -74,7 +74,7 @@ class DeviceConfig : public IJSONSerializable
     bool    rememberCurrentEffect = true;
     int     powerLimit = POWER_LIMIT_DEFAULT;
     uint8_t brightness = BRIGHTNESS_MAX;
-    String stockTickerApiKey;
+    String stockTickerApiKey = cszStockTickerAPIKey;
 
     std::vector<SettingSpec, psram_allocator<SettingSpec>> settingSpecs;
     std::vector<std::reference_wrapper<SettingSpec>> settingSpecReferences;
@@ -270,12 +270,14 @@ class DeviceConfig : public IJSONSerializable
             );
             powerLimitSpec.MinimumValue = POWER_LIMIT_MIN;
             powerLimitSpec.HasValidation = true;
-            settingSpecs.emplace_back(
+            auto stockTickerSpec = settingSpecs.emplace_back(
                 NAME_OF(stockTickerApiKey),
                 "FinnHub Stock Ticker API key",
-                "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Finnhub API provided by Finnhub.io</a> (write only).",
+                "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Finnhub API provided by Finnhub.io</a>.",
                 SettingSpec::SettingType::String
-            ).HasValidation = true;
+            );
+            stockTickerSpec.HasValidation = true;
+            stockTickerSpec.Access = SettingSpec::SettingAccess::WriteOnly;
 
             settingSpecReferences.insert(settingSpecReferences.end(), settingSpecs.begin(), settingSpecs.end());
         }
