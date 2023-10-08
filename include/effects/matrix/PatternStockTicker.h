@@ -82,6 +82,7 @@ public:
     float  openPrice         = 0.0f;
     float  prevClosePrice    = 0.0f;
     long   sampleTime        = 0l;
+    StockTicker* prev        = NULL;
     StockTicker* next        = NULL;
   
 };
@@ -95,7 +96,9 @@ class PatternStockTicker : public LEDStripEffect
 
 private:
 
-    StockTicker ticker;
+    StockTicker tickers[3];
+    size_t numberTickers        = 3;
+    StockTicker *currentTicker  = tickers;
 
 
     bool   dataReady            = false;
@@ -108,7 +111,6 @@ private:
     /**
      * @brief The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
      * 
-     * @return true 
      * @return false 
      */
     bool ShouldShowTitle() const
@@ -165,7 +167,7 @@ private:
      * @return true 
      * @return false 
      */
-    bool updateTickerCode()
+    bool updateTickerCode(StockTicker *ticker)
     {
         HTTPClient http;
         String url;
@@ -175,17 +177,17 @@ private:
             return false;
         }
 
-        strcpy(ticker.strSymbol, stockTickerList.c_str());
+        strcpy(ticker->strSymbol, stockTickerList.c_str());
 
         url = "https://finnhub.io/api/v1/stock/profile2"
-              "?symbol=" + urlEncode(ticker.strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+              "?symbol=" + urlEncode(ticker->strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
 
         if (httpResponseCode <= 0)
         {
-            debugW("Error fetching data for company of for ticker: %s", ticker.strSymbol);
+            debugW("Error fetching data for company of for ticker: %s", ticker->strSymbol);
             http.end();
             return false;
         }
@@ -209,11 +211,11 @@ private:
         deserializeJson(doc, http.getString());
         JsonObject companyData =  doc.as<JsonObject>();
 
-        strcpy(ticker.strCompanyName, companyData["name"]);
-        strcpy(ticker.strExchangeName, companyData["exchange"]);
-        strcpy(ticker.strCurrency, companyData["currency"]);
-        ticker.marketCap         = companyData["marketCapitalization"].as<float>();
-        ticker.sharesOutstanding = companyData["shareOutstanding"].as<float>();
+        strcpy(ticker->strCompanyName, companyData["name"]);
+        strcpy(ticker->strExchangeName, companyData["exchange"]);
+        strcpy(ticker->strCurrency, companyData["currency"]);
+        ticker->marketCap         = companyData["marketCapitalization"].as<float>();
+        ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
         http.end();
 
@@ -226,10 +228,10 @@ private:
      * @return true 
      * @return false 
      */
-    bool getStockData()
+    bool getStockData(StockTicker *ticker)
     {
         HTTPClient http;
-        String tickerValue = ticker.strSymbol;
+        String tickerValue = ticker->strSymbol;
 
         String url = "https://finnhub.io/api/v1/quote"
             "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
@@ -259,23 +261,23 @@ private:
                 dataReady = true;
 
 
-            ticker.currentPrice      = stockData["c"].as<float>();
-            ticker.change            = stockData["d"].as<float>();
-            ticker.percentChange     = stockData["dp"].as<float>();
-            ticker.highPrice         = stockData["h"].as<float>();
-            ticker.lowPrice          = stockData["l"].as<float>();
-            ticker.openPrice         = stockData["o"].as<float>();
-            ticker.prevClosePrice    = stockData["pc"].as<float>();
-            ticker.sampleTime        = stockData["t"].as<long>();
+            ticker->currentPrice      = stockData["c"].as<float>();
+            ticker->change            = stockData["d"].as<float>();
+            ticker->percentChange     = stockData["dp"].as<float>();
+            ticker->highPrice         = stockData["h"].as<float>();
+            ticker->lowPrice          = stockData["l"].as<float>();
+            ticker->openPrice         = stockData["o"].as<float>();
+            ticker->prevClosePrice    = stockData["pc"].as<float>();
+            ticker->sampleTime        = stockData["t"].as<long>();
 
-            debugI("Got ticker: Now %f Lo %f, Hi %f, Change %f", ticker.currentPrice, ticker.lowPrice, ticker.highPrice, ticker.change);
+            debugI("Got ticker: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
 
             http.end();
             return true;
         }
         else
         {
-            debugW("Error fetching Stock data for Ticker: %s", ticker.strSymbol);
+            debugW("Error fetching Stock data for Ticker: %s", ticker->strSymbol);
             http.end();
             return false;
         }
@@ -294,15 +296,18 @@ private:
             vTaskDelay(pdMS_TO_TICKS(STOCK_CHECK_ERROR_INTERVAL));
         }
 
-        updateTickerCode();
+        for (int i = 0; i < numberTickers; i++) {
+            updateTickerCode(&tickers[i]);
 
-        if (getStockData())
-        {
-            debugW("Got Stock Data");
-        }
-        else
-        {
-            debugW("Failed to get Stock Data");
+            if (getStockData(&tickers[i]))
+            {
+                debugW("Got Stock Data");
+            }
+            else
+            {
+                debugW("Failed to get Stock Data");
+            }
+
         }
     }
 
@@ -345,6 +350,7 @@ public:
      
         stockTickerList  = DEFAULT_STOCK_TICKER;
         stockChanged     = true;
+        setupDummyTickers();
     }
 
     /**
@@ -361,6 +367,7 @@ public:
             stockTickerList = jsonObject["stk"].as<String>();
         }
         stockChanged     = true;
+        setupDummyTickers();
     }
 
     /**
@@ -372,6 +379,19 @@ public:
         g_ptrSystem->NetworkReader().CancelReader(readerIndex);
     }
 
+    void setupDummyTickers()
+    {
+        strcpy(tickers[0].strSymbol, "APPL");
+        tickers[0].next = &tickers[1];
+        tickers[0].prev = &tickers[2];
+        strcpy(tickers[1].strSymbol, "IBM");
+        tickers[1].next = &tickers[2];
+        tickers[1].prev = &tickers[0];
+        strcpy(tickers[2].strSymbol, "MSFT");
+        tickers[2].next = &tickers[0];
+        tickers[2].prev = &tickers[1];
+
+    }
     /**
      * @brief 
      * 
@@ -445,7 +465,7 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showCompany = strlen(ticker.strCompanyName) == 0 ? ticker.strSymbol : ticker.strCompanyName;
+        String showCompany = strlen(currentTicker->strCompanyName) == 0 ? currentTicker->strSymbol : currentTicker->strCompanyName;
         showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
@@ -456,12 +476,12 @@ public:
 
         if (dataReady)
         {
-            String strPrice(ticker.currentPrice);
+            String strPrice(currentTicker->currentPrice);
             x = MATRIX_WIDTH - fontWidth * strPrice.length();
             g()->setCursor(x, y);
-            if (ticker.change > 0.0) {
+            if (currentTicker->change > 0.0) {
                 g()->setTextColor(GREEN16);
-            } else if (ticker.change < 0.0) {
+            } else if (currentTicker->change < 0.0) {
                 g()->setTextColor(RED16);
             } else {
                 g()->setTextColor(WHITE16);
@@ -481,8 +501,8 @@ public:
         if (dataReady)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( ticker.highPrice);
-            String strLo( ticker.lowPrice);
+            String strHi( currentTicker->highPrice);
+            String strLo( currentTicker->lowPrice);
 
             // Draw today's HI and LO temperatures
 
@@ -497,8 +517,8 @@ public:
 
             // Draw tomorrow's HI and LO temperatures
 
-            strHi = String((int)ticker.openPrice);
-            strLo = String((int)ticker.prevClosePrice);
+            strHi = String(currentTicker->openPrice);
+            strLo = String(currentTicker->prevClosePrice);
             x = MATRIX_WIDTH - fontWidth * strHi.length();
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
