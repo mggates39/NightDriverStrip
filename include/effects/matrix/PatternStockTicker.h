@@ -105,6 +105,8 @@ private:
     bool   stockChanged         = false;
     String stockTickerList      = DEFAULT_STOCK_TICKER;
     size_t readerIndex          = std::numeric_limits<size_t>::max();
+    unsigned long msLastCheck   = 0;
+    bool succeededBefore        = false;
     time_t latestUpdate         = 0;
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
@@ -283,6 +285,17 @@ private:
         }
     }
 
+    void StockReader()
+    {
+        unsigned long msSinceLastCheck = millis() - msLastCheck;
+
+        if (stockChanged || !msLastCheck
+            || (!succeededBefore && msSinceLastCheck > STOCK_CHECK_ERROR_INTERVAL)
+            || msSinceLastCheck > STOCK_CHECK_INTERVAL)
+        {
+            UpdateStock();
+        }
+    }
 
     /**
      * @brief 
@@ -297,21 +310,22 @@ private:
         }
 
         for (int i = 0; i < numberTickers; i++) {
-            updateTickerCode(&tickers[i]);
-
-            if (getStockData(&tickers[i]))
-            {
-                debugW("Got Stock Data");
+            if (updateTickerCode(&tickers[i])) {
+                if (getStockData(&tickers[i]))
+                {
+                    debugW("Got Stock Data");
+                }
+                else
+                {
+                    debugW("Failed to get Stock Data");
+                }
+            } else {
+                debugW("Failed to get Stock Ticker Info");
             }
-            else
-            {
-                debugW("Failed to get Stock Data");
-            }
-
         }
     }
 
-public:
+protected:
 
     /**
      * @brief 
@@ -341,6 +355,7 @@ public:
         return true;
     }
 
+public:
     /**
      * @brief Construct a new Pattern Stock Ticker object
      * 
@@ -423,7 +438,7 @@ public:
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { UpdateStock(); }, STOCK_READER_INTERVAL, true);
+        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { StockReader(); }, STOCK_READER_INTERVAL, true);
 
         return true;
     }
