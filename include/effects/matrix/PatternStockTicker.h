@@ -56,6 +56,7 @@
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
 #define STOCK_CHECK_ERROR_INTERVAL  30000
 #define STOCK_READER_INTERVAL       5000
+#define STOCK_DISPLAY_INTERVAL      30000
 
 /**
  * @brief All the data about a specific Stock Ticker
@@ -303,17 +304,31 @@ private:
      */
     void UpdateStock()
     {
-        while(!WiFi.isConnected())
+        if (!WiFi.isConnected())
         {
-            debugI("Delaying Stock update, waiting for WiFi...");
-            vTaskDelay(pdMS_TO_TICKS(STOCK_CHECK_ERROR_INTERVAL));
+            debugW("Skipping Stock update, waiting for WiFi...");
+            return;
         }
+
+        if (0 == numberTickers)
+        {
+            debugW("No Stock Tickers selected, so skipping check...");
+            return;
+        }
+
+        msLastCheck = millis();
+
+        if (stockChanged)
+            succeededBefore = false;
+
+        stockChanged = false;
 
         for (int i = 0; i < numberTickers; i++) {
             if (updateTickerCode(&tickers[i])) {
                 if (getStockData(&tickers[i]))
                 {
                     debugW("Got Stock Data");
+                    succeededBefore = true;
                 }
                 else
                 {
@@ -463,24 +478,35 @@ public:
 
         auto secondsSinceLastUpdate = now - latestUpdate;
 
-        // If location and/or country have changed, trigger an update regardless of timer, but
-        // not more than once every half a minute
-        if (secondsSinceLastUpdate >= STOCK_CHECK_INTERVAL)
+        if (secondsSinceLastUpdate >= STOCK_DISPLAY_INTERVAL)
         {
             latestUpdate = now;
 
-            debugW("Triggering thread to check stock now...");
-            g_ptrSystem->NetworkReader().FlagReader(readerIndex);
+            currentTicker = currentTicker->next;
         }
 
+        DrawTicker(currentTicker, 0);
+    }
 
+    void DrawTicker(StockTicker *ticker, int offset) 
+    {
+        const int fontHeight = 7;
+        const int fontWidth  = 5;
+        const int xHalf      = MATRIX_WIDTH / 2 - 1;
+
+        g()->fillScreen(BLACK16);
+        g()->fillRect(0, 0, MATRIX_WIDTH, 9, g()->to16bit(CRGB(0,0,128)));
+
+        g()->setFont(&Apple5x7);
+
+ 
         // Print the Company name
 
         int x = 0;
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        String showCompany = strlen(currentTicker->strCompanyName) == 0 ? currentTicker->strSymbol : currentTicker->strCompanyName;
+        String showCompany = strlen(ticker->strCompanyName) == 0 ? ticker->strSymbol : ticker->strCompanyName;
         showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
             g()->print("No API Key");
@@ -491,12 +517,12 @@ public:
 
         if (dataReady)
         {
-            String strPrice(currentTicker->currentPrice);
+            String strPrice(ticker->currentPrice);
             x = MATRIX_WIDTH - fontWidth * strPrice.length();
             g()->setCursor(x, y);
-            if (currentTicker->change > 0.0) {
+            if (ticker->change > 0.0) {
                 g()->setTextColor(GREEN16);
-            } else if (currentTicker->change < 0.0) {
+            } else if (ticker->change < 0.0) {
                 g()->setTextColor(RED16);
             } else {
                 g()->setTextColor(WHITE16);
@@ -516,8 +542,8 @@ public:
         if (dataReady)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( currentTicker->highPrice);
-            String strLo( currentTicker->lowPrice);
+            String strHi( ticker->highPrice);
+            String strLo( ticker->lowPrice);
 
             // Draw today's HI and LO temperatures
 
@@ -532,8 +558,8 @@ public:
 
             // Draw tomorrow's HI and LO temperatures
 
-            strHi = String(currentTicker->openPrice);
-            strLo = String(currentTicker->prevClosePrice);
+            strHi = String(ticker->openPrice);
+            strLo = String(ticker->prevClosePrice);
             x = MATRIX_WIDTH - fontWidth * strHi.length();
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
@@ -545,7 +571,7 @@ public:
         }
     }
 
-    /**
+     /**
      * @brief Update the JSON Object with our current setting values
      * 
      * @param jsonObject 
