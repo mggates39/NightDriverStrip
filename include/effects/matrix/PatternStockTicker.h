@@ -104,6 +104,7 @@ private:
 
     bool   dataReady            = false;
     bool   stockChanged         = false;
+    size_t currentOffset        = 0;
     String stockTickerList      = DEFAULT_STOCK_TICKER;
     size_t readerIndex          = std::numeric_limits<size_t>::max();
     unsigned long msLastCheck   = 0;
@@ -485,7 +486,7 @@ public:
             currentTicker = currentTicker->next;
         }
 
-        DrawTicker(currentTicker, 0);
+        DrawTicker(currentTicker, currentOffset);
     }
 
     void DrawTicker(StockTicker *ticker, int offset) 
