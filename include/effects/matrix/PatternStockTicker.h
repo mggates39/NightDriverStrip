@@ -56,7 +56,7 @@
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
 #define STOCK_CHECK_ERROR_INTERVAL  30000
 #define STOCK_READER_INTERVAL       5000
-#define STOCK_DISPLAY_INTERVAL      30000
+#define STOCK_DISPLAY_INTERVAL      32000
 
 /**
  * @brief All the data about a specific Stock Ticker
@@ -109,7 +109,7 @@ private:
     size_t readerIndex          = std::numeric_limits<size_t>::max();
     unsigned long msLastCheck   = 0;
     bool succeededBefore        = false;
-    time_t latestUpdate         = 0;
+    unsigned long msLastUpdate  = 0;
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
     /**
@@ -411,6 +411,12 @@ public:
         g_ptrSystem->NetworkReader().CancelReader(readerIndex);
     }
 
+    /**
+     * @brief Placeholder function until I get my string parser set up.
+     * This creates three default tickert for Apple, MicroSoft and IBM.
+     * Then links them in a double circular linked list.
+     * 
+     */
     void setupDummyTickers()
     {
         strcpy(tickers[0].strSymbol, "APPL");
@@ -422,8 +428,10 @@ public:
         strcpy(tickers[2].strSymbol, "MSFT");
         tickers[2].next = &tickers[0];
         tickers[2].prev = &tickers[1];
+        currentTicker = tickers;
 
     }
+
     /**
      * @brief 
      * 
@@ -466,35 +474,36 @@ public:
      */
     void Draw() override
     {
-        const int fontHeight = 7;
-        const int fontWidth  = 5;
-        const int xHalf      = MATRIX_WIDTH / 2 - 1;
+        unsigned long msSinceLastCheck = millis() - msLastUpdate;
 
-        g()->fillScreen(BLACK16);
-        g()->fillRect(0, 0, MATRIX_WIDTH, 9, g()->to16bit(CRGB(0,0,128)));
-
-        g()->setFont(&Apple5x7);
-
-        time_t now;
-        time(&now);
-
-        auto secondsSinceLastUpdate = now - latestUpdate;
-
-        if (secondsSinceLastUpdate >= STOCK_DISPLAY_INTERVAL)
+        if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
         {
-            latestUpdate = now;
-
+            msLastUpdate = millis() ;
             currentTicker = currentTicker->next;
+            currentOffset = 0;
+        } else {
+            if (msSinceLastCheck % 500 == 0) {
+                currentOffset++;
+            }
         }
 
         DrawTicker(currentTicker, currentOffset);
+        if (currentOffset > 0) {
+            DrawTicker(currentTicker->next, (currentOffset-64));
+        }
     }
 
+    /**
+     * @brief Draw the specified ticket data at the proper offset on the panel
+     * 
+     * @param ticker 
+     * @param offset 
+     */
     void DrawTicker(StockTicker *ticker, int offset) 
     {
         const int fontHeight = 7;
         const int fontWidth  = 5;
-        const int xHalf      = MATRIX_WIDTH / 2 - 1;
+        const int xHalf      = (MATRIX_WIDTH / 2 - 1) + offset;
 
         g()->fillScreen(BLACK16);
         g()->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, g()->to16bit(CRGB(0,0,128)));
@@ -504,7 +513,7 @@ public:
  
         // Print the Company name
 
-        int x = 0;
+        int x = offset;
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
@@ -520,7 +529,7 @@ public:
         if (dataReady)
         {
             String strPrice(ticker->currentPrice);
-            x = MATRIX_WIDTH - fontWidth * strPrice.length();
+            x = (MATRIX_WIDTH - fontWidth * strPrice.length()) + offset;
             g()->setCursor(x, y);
             if (ticker->change > 0.0) {
                 g()->setTextColor(GREEN16);
@@ -536,7 +545,7 @@ public:
         y+=1;
 
         g()->drawLine(0, y, MATRIX_WIDTH-1, y, CRGB(0,0,128));
-        g()->drawLine(xHalf, y, xHalf, MATRIX_HEIGHT-1, CRGB(0,0,128));
+        g()->drawLine(xHalf + offset, y, xHalf + offset, MATRIX_HEIGHT-1, CRGB(0,0,128));
         y+=2 + fontHeight;
 
         // Draw the temperature in lighter white
@@ -549,11 +558,11 @@ public:
 
             // Draw today's HI and LO temperatures
 
-            x = xHalf - fontWidth * strHi.length();
+            x = (xHalf - fontWidth * strHi.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
             g()->print(strHi);
-            x = xHalf - fontWidth * strLo.length();
+            x = (xHalf - fontWidth * strLo.length()) + offset;
             y+= fontHeight;
             g()->setCursor(x,y);
             g()->print(strLo);
@@ -562,11 +571,11 @@ public:
 
             strHi = String(ticker->openPrice);
             strLo = String(ticker->prevClosePrice);
-            x = MATRIX_WIDTH - fontWidth * strHi.length();
+            x = (MATRIX_WIDTH - fontWidth * strHi.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
             g()->print(strHi);
-            x = MATRIX_WIDTH - fontWidth * strLo.length();
+            x = (MATRIX_WIDTH - fontWidth * strLo.length()) + offset;
             y+= fontHeight;
             g()->setCursor(x,y);
             g()->print(strLo);
