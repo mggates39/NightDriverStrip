@@ -598,6 +598,8 @@ public:
 
         jsonDoc[NAME_OF(stockTickerList)] = stockTickerList;
 
+        assert(!jsonDoc.overflowed());
+        
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
