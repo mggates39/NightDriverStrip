@@ -211,15 +211,18 @@ private:
             "weburl":"https://www.amazon.com/"}
         */
 
-        AllocatedJsonDocument doc(2048);
+        AllocatedJsonDocument doc(1024);
         deserializeJson(doc, http.getString());
         JsonObject companyData =  doc.as<JsonObject>();
 
+        strcpy(ticker->strSymbol, companyData["ticker"]);
         strcpy(ticker->strCompanyName, companyData["name"]);
         strcpy(ticker->strExchangeName, companyData["exchange"]);
         strcpy(ticker->strCurrency, companyData["currency"]);
         ticker->marketCap         = companyData["marketCapitalization"].as<float>();
         ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
+
+        debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
 
         http.end();
 
@@ -256,7 +259,7 @@ private:
                 }
             */
             
-            AllocatedJsonDocument jsonDoc(512);
+            AllocatedJsonDocument jsonDoc(256);
             deserializeJson(jsonDoc, http.getString());
             JsonObject stockData =  jsonDoc.as<JsonObject>();
 
@@ -274,7 +277,7 @@ private:
             ticker->prevClosePrice    = stockData["pc"].as<float>();
             ticker->sampleTime        = stockData["t"].as<long>();
 
-            debugI("Got ticker: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
+            debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
 
             http.end();
             return true;
