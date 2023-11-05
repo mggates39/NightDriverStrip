@@ -233,6 +233,7 @@ class DeviceConfig : public IJSONSerializable
             );
             weatherKeySpec.HasValidation = true;
             weatherKeySpec.Access = SettingSpec::SettingAccess::WriteOnly;
+            weatherKeySpec.EmptyAllowed.reset();        // Silently ignore empty value at the front-end
 
             settingSpecs.emplace_back(
                 TimeZoneTag,
