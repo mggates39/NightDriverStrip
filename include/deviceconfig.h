@@ -293,6 +293,7 @@ class DeviceConfig : public IJSONSerializable
             );
             stockTickerSpec.HasValidation = true;
             stockTickerSpec.Access = SettingSpec::SettingAccess::WriteOnly;
+            stockTickerSpec.EmptyAllowed.reset();        // Silently ignore empty value at the front-end
 
             settingSpecReferences.insert(settingSpecReferences.end(), settingSpecs.begin(), settingSpecs.end());
         }
