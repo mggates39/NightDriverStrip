@@ -176,13 +176,6 @@ private:
         HTTPClient http;
         String url;
 
-        if (!stockChanged)
-        {
-            return false;
-        }
-
-        strcpy(ticker->strSymbol, stockTickerList.c_str());
-
         url = "https://finnhub.io/api/v1/stock/profile2"
               "?symbol=" + urlEncode(ticker->strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
