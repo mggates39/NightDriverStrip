@@ -557,6 +557,13 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
+
+        if (null == ticket) {
+            // Tell the user there is no stocks selected and bail
+            g()->print("No Stocks");
+            return;
+        }
+
         String showCompany = strlen(ticker->strCompanyName) == 0 ? ticker->strSymbol : ticker->strCompanyName;
         showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
