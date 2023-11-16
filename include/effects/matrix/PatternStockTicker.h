@@ -349,6 +349,12 @@ private:
             return;
         }
 
+        if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
+        {
+            debugW("No Stock API Key, so skipping check...");
+            return;
+        }
+            
         msLastCheck = millis();
 
         if (stockChanged)
@@ -552,9 +558,15 @@ public:
         String showCompany = strlen(ticker->strCompanyName) == 0 ? ticker->strSymbol : ticker->strCompanyName;
         showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
+        {
+            // Tell the user there is no API Key and bail
             g()->print("No API Key");
+            return;
+        }
         else
+        {
             g()->print(showCompany.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+        }
 
         // Display the Stock Price, right-justified
 
