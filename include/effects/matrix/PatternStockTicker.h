@@ -422,7 +422,7 @@ public:
      */
     void setupDummyTickers()
     {
-        strcpy(tickers[0].strSymbol, "APPL");
+        strcpy(tickers[0].strSymbol, "AAPL");
         tickers[0].next = &tickers[1];
         tickers[0].prev = &tickers[2];
         strcpy(tickers[1].strSymbol, "IBM");
