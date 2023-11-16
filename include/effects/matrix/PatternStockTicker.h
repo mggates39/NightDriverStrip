@@ -332,7 +332,7 @@ private:
     }
 
     /**
-     * @brief 
+     * @brief Drive the checking of Stock Data
      * 
      */
     void UpdateStock()
@@ -342,6 +342,10 @@ private:
             debugW("Skipping Stock update, waiting for WiFi...");
             return;
         }
+
+        // Track the check time so that we do not flood the net if we do not
+        // have stocks to check or an API Key
+        msLastCheck = millis();
 
         if (0 == numberTickers)
         {
@@ -355,8 +359,6 @@ private:
             return;
         }
             
-        msLastCheck = millis();
-
         if (stockChanged)
             succeededBefore = false;
 
