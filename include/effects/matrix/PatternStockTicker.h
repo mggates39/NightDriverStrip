@@ -205,21 +205,36 @@ private:
         */
 
         AllocatedJsonDocument doc(1024);
-        deserializeJson(doc, http.getString());
-        JsonObject companyData =  doc.as<JsonObject>();
+        String headerData = http.getString();
+        debugI("Stock Heder: %s", headerData.c_str());
+        if (headerData.equals("{}")) 
+        {
+            strcpy(ticker->strCompanyName, "Bad Symbol");
+            strcpy(ticker->strExchangeName, "");
+            strcpy(ticker->strCurrency, "");
+            ticker->marketCap         = 0.0;
+            ticker->sharesOutstanding = 0.0;
 
-        strcpy(ticker->strSymbol, companyData["ticker"]);
-        strcpy(ticker->strCompanyName, companyData["name"]);
-        strcpy(ticker->strExchangeName, companyData["exchange"]);
-        strcpy(ticker->strCurrency, companyData["currency"]);
-        ticker->marketCap         = companyData["marketCapitalization"].as<float>();
-        ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
+            debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
+            http.end();
+            return false;
+        }
+        else
+        {
+            deserializeJson(doc, headerData);
+            JsonObject companyData =  doc.as<JsonObject>();
 
-        debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
+            strcpy(ticker->strSymbol, companyData["ticker"]);
+            strcpy(ticker->strCompanyName, companyData["name"]);
+            strcpy(ticker->strExchangeName, companyData["exchange"]);
+            strcpy(ticker->strCurrency, companyData["currency"]);
+            ticker->marketCap         = companyData["marketCapitalization"].as<float>();
+            ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
-        http.end();
-
-        return true;
+            debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
+            http.end();
+            return true;
+        }
     }
 
     /**
@@ -235,6 +250,7 @@ private:
 
         String url = "https://finnhub.io/api/v1/quote"
             "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+        debugI("Stock Data URL: %s", url.c_str());
         http.begin(url);
         int httpResponseCode = http.GET();
         if (httpResponseCode > 0)
@@ -253,27 +269,47 @@ private:
             */
             
             AllocatedJsonDocument jsonDoc(256);
-            deserializeJson(jsonDoc, http.getString());
-            JsonObject stockData =  jsonDoc.as<JsonObject>();
+            String stockHeader = http.getString();
+            debugI("Stock Data: %s", stockHeader.c_str());
+            if (stockHeader.equals("{}")) 
+            {
+                ticker->currentPrice      = 0.0;
+                ticker->change            = 0.0;
+                ticker->percentChange     = 0.0;
+                ticker->highPrice         = 0.0;
+                ticker->lowPrice          = 0.0;
+                ticker->openPrice         = 0.0;
+                ticker->prevClosePrice    = 0.0;
+                ticker->sampleTime        = 0.0;
+                ticker->sharesOutstanding = 0.0;
 
-            // Once we have a non-zero temp we can start displaying things
-            if (0 < jsonDoc["c"])
-                dataReady = true;
+                debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
+                http.end();
+                return false;
+            }
+            else
+            {
+                deserializeJson(jsonDoc, stockHeader);
+                JsonObject stockData =  jsonDoc.as<JsonObject>();
+
+                // Once we have a non-zero temp we can start displaying things
+                if (0 < jsonDoc["c"])
+                    dataReady = true;
 
 
-            ticker->currentPrice      = stockData["c"].as<float>();
-            ticker->change            = stockData["d"].as<float>();
-            ticker->percentChange     = stockData["dp"].as<float>();
-            ticker->highPrice         = stockData["h"].as<float>();
-            ticker->lowPrice          = stockData["l"].as<float>();
-            ticker->openPrice         = stockData["o"].as<float>();
-            ticker->prevClosePrice    = stockData["pc"].as<float>();
-            ticker->sampleTime        = stockData["t"].as<long>();
+                ticker->currentPrice      = stockData["c"].as<float>();
+                ticker->change            = stockData["d"].as<float>();
+                ticker->percentChange     = stockData["dp"].as<float>();
+                ticker->highPrice         = stockData["h"].as<float>();
+                ticker->lowPrice          = stockData["l"].as<float>();
+                ticker->openPrice         = stockData["o"].as<float>();
+                ticker->prevClosePrice    = stockData["pc"].as<float>();
+                ticker->sampleTime        = stockData["t"].as<long>();
 
-            debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
-
-            http.end();
-            return true;
+                debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
+                http.end();
+                return true;
+            }
         }
         else
         {
@@ -470,6 +506,7 @@ public:
      */
     void Draw() override
     {
+        return;
         unsigned long msSinceLastCheck = millis() - msLastUpdate;
 
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
