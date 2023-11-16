@@ -506,7 +506,6 @@ public:
      */
     void Draw() override
     {
-        return;
         unsigned long msSinceLastCheck = millis() - msLastUpdate;
 
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
@@ -514,10 +513,10 @@ public:
             msLastUpdate = millis() ;
             currentTicker = currentTicker->next;
             currentOffset = 0;
-        } else {
-            if (msSinceLastCheck % 500 == 0) {
-                currentOffset++;
-            }
+        // } else {
+        //     if (msSinceLastCheck % 500 == 0) {
+        //         currentOffset++;
+        //     }
         }
 
         DrawTicker(currentTicker, currentOffset);
