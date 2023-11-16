@@ -250,9 +250,10 @@ private:
 
         String url = "https://finnhub.io/api/v1/quote"
             "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
-        debugI("Stock Data URL: %s", url.c_str());
+
         http.begin(url);
         int httpResponseCode = http.GET();
+        
         if (httpResponseCode > 0)
         {
             /*
@@ -558,7 +559,7 @@ public:
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
 
-        if (null == ticket) {
+        if (NULL == ticker) {
             // Tell the user there is no stocks selected and bail
             g()->print("No Stocks");
             return;
