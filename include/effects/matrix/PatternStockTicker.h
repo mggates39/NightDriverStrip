@@ -50,7 +50,7 @@
 #include "effects.h"
 
 // Default stock Ticker code Apple 
-#define DEFAULT_STOCK_TICKER "APPL"
+#define DEFAULT_STOCK_TICKERS "AAPL,IBM,MSFT"
 
 // Update stocks every 10 minutes, retry after 30 seconds on error, and check other things every 5 seconds
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
@@ -105,7 +105,7 @@ private:
     bool   dataReady            = false;
     bool   stockChanged         = false;
     size_t currentOffset        = 0;
-    String stockTickerList      = DEFAULT_STOCK_TICKER;
+    String stockTickerList      = DEFAULT_STOCK_TICKERS;
     size_t readerIndex          = std::numeric_limits<size_t>::max();
     unsigned long msLastCheck   = 0;
     bool succeededBefore        = false;
