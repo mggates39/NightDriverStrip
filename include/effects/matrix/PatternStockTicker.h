@@ -49,8 +49,9 @@
 #include <map>
 #include "effects.h"
 
-// Default stock Ticker code Apple 
-#define DEFAULT_STOCK_TICKERS "AAPL,IBM,MSFT"
+// Default stock Ticker symbols for Apple, IBM, and Microsoft 
+#define DEFAULT_STOCK_TICKERS       "AAPL,IBM,MSFT"
+#define MAX_STOCK_TICKER            10
 
 // Update stocks every 10 minutes, retry after 30 seconds on error, and check other things every 5 seconds
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
@@ -97,6 +98,7 @@ class PatternStockTicker : public LEDStripEffect
 
 private:
 
+    // rework this for dynamic stock list
     StockTicker tickers[3];
     size_t numberTickers        = 3;
     StockTicker *currentTicker  = tickers;
@@ -113,7 +115,8 @@ private:
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
     /**
-     * @brief The stock ticker is obviously stock data, and we don't want text overlaid on top of our text
+     * @brief The stock ticker is obviously stock data, 
+     * and we don't want text overlaid on top of our text
      * 
      * @return false 
      */
@@ -123,7 +126,7 @@ private:
     }
 
     /**
-     * @brief 
+     * @brief How many frames per second do we need?
      * 
      * @return size_t 
      */
@@ -133,7 +136,7 @@ private:
     }
 
     /**
-     * @brief Does this effect need double buffering>
+     * @brief Does this effect need double buffering?
      * 
      * @return true 
      */
@@ -143,7 +146,8 @@ private:
     }
 
     /**
-     * @brief 
+     * @brief Process the list of stock symbols 
+     * and build the data structures in PSRAM to hold the data
      * 
      * @param newSymbols 
      * @return int 
@@ -421,7 +425,7 @@ public:
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
     {
      
-        stockTickerList  = DEFAULT_STOCK_TICKER;
+        stockTickerList  = DEFAULT_STOCK_TICKERS;
         stockChanged     = true;
         setupDummyTickers();
     }
@@ -434,7 +438,7 @@ public:
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
             
-        stockTickerList  = DEFAULT_STOCK_TICKER;
+        stockTickerList  = DEFAULT_STOCK_TICKERS;
 
         if (jsonObject.containsKey("stk")) {
             stockTickerList = jsonObject["stk"].as<String>();
@@ -450,6 +454,7 @@ public:
     ~PatternStockTicker()
     {
         g_ptrSystem->NetworkReader().CancelReader(readerIndex);
+        cleanUpTickerData();
     }
 
     /**
@@ -470,6 +475,15 @@ public:
         tickers[2].next = &tickers[0];
         tickers[2].prev = &tickers[1];
         currentTicker = tickers;
+
+    }
+
+    /**
+     * @brief Free up the Ticket objects in PSRAM
+     * 
+     */
+    void cleanUpTickerData()
+    {
 
     }
 
