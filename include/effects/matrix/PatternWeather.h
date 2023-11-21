@@ -91,26 +91,26 @@ extern const uint8_t thunderstorm_night_end[]       asm("_binary_assets_bmp_thun
 
 static const char * pszDaysOfWeek[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
 
-static std::map<int, EmbeddedFile, std::less<int>, psram_allocator<std::pair<int, EmbeddedFile>>> weatherIcons =
+static std::map<String, EmbeddedFile, std::less<String>, psram_allocator<std::pair<String, EmbeddedFile>>> weatherIcons =
 {
-    { 1, EmbeddedFile(clearsky_start, clearsky_end) },
-    { 2, EmbeddedFile(fewclouds_start, fewclouds_end) },
-    { 3, EmbeddedFile(scatteredclouds_start, scatteredclouds_end) },
-    { 4, EmbeddedFile(brokenclouds_start, brokenclouds_end) },
-    { 9, EmbeddedFile(showerrain_start, showerrain_end) },
-    { 10, EmbeddedFile(rain_start, rain_end) },
-    { 11, EmbeddedFile(thunderstorm_start, thunderstorm_end) },
-    { 13, EmbeddedFile(snow_start, snow_end) },
-    { 50, EmbeddedFile(mist_start, mist_end) },
-    { 101, EmbeddedFile(clearsky_night_start, clearsky_night_end) },
-    { 102, EmbeddedFile(fewclouds_night_start, fewclouds_night_end) },
-    { 103, EmbeddedFile(scatteredclouds_night_start, scatteredclouds_night_end) },
-    { 104, EmbeddedFile(brokenclouds_night_start, brokenclouds_night_end) },
-    { 109, EmbeddedFile(showerrain_night_start, showerrain_night_end) },
-    { 110, EmbeddedFile(rain_night_start, rain_night_end) },
-    { 111, EmbeddedFile(thunderstorm_night_start, thunderstorm_night_end) },
-    { 113, EmbeddedFile(snow_night_start, snow_night_end) },
-    { 150, EmbeddedFile(mist_night_start, mist_night_end) }
+    { "01d", EmbeddedFile(clearsky_start, clearsky_end) },
+    { "02d", EmbeddedFile(fewclouds_start, fewclouds_end) },
+    { "03d", EmbeddedFile(scatteredclouds_start, scatteredclouds_end) },
+    { "04d", EmbeddedFile(brokenclouds_start, brokenclouds_end) },
+    { "09d", EmbeddedFile(showerrain_start, showerrain_end) },
+    { "10d", EmbeddedFile(rain_start, rain_end) },
+    { "11d", EmbeddedFile(thunderstorm_start, thunderstorm_end) },
+    { "13d", EmbeddedFile(snow_start, snow_end) },
+    { "50d", EmbeddedFile(mist_start, mist_end) },
+    { "01n", EmbeddedFile(clearsky_night_start, clearsky_night_end) },
+    { "02n", EmbeddedFile(fewclouds_night_start, fewclouds_night_end) },
+    { "03n", EmbeddedFile(scatteredclouds_night_start, scatteredclouds_night_end) },
+    { "04n", EmbeddedFile(brokenclouds_night_start, brokenclouds_night_end) },
+    { "09n", EmbeddedFile(showerrain_night_start, showerrain_night_end) },
+    { "10n", EmbeddedFile(rain_night_start, rain_night_end) },
+    { "11n", EmbeddedFile(thunderstorm_night_start, thunderstorm_night_end) },
+    { "13n", EmbeddedFile(snow_night_start, snow_night_end) },
+    { "50n", EmbeddedFile(mist_night_start, mist_night_end) }
 };
 
 class PatternWeather : public LEDStripEffect
@@ -123,9 +123,9 @@ private:
     String strCountryCode     = "";
     String strLatitude        = "0.0";
     String strLongitude       = "0.0";
+    String iconToday          = "";
+    String iconTomorrow       = "";
     int    dayOfWeek          = 0;
-    int    iconToday          = -1;
-    int    iconTomorrow       = -1;
     float  temperature        = 0.0f;
     float  highToday          = 0.0f;
     float  loToday            = 0.0f;
@@ -242,8 +242,8 @@ private:
         {
             AllocatedJsonDocument doc(256);
             String jsonloc = http.getString();
-            DeserializationError de = deserializeJson(doc, jsonloc);
-            if (!de)
+            DeserializationError deserializeError = deserializeJson(doc, jsonloc);
+            if (!deserializeError)
             {
                 JsonObject coordinates = configLocationIsZip ? doc.as<JsonObject>() : doc[0].as<JsonObject>();
             
@@ -258,14 +258,13 @@ private:
             }
             else
             {
-                debugW("Bad location JSON: %s", de.c_str());
+                debugW("Bad location JSON: %s", deserializeError.c_str());
             }
 
         }
         else
         {
             debugW("Error fetching coordinates for location: %s", configLocation.c_str());
-            return false;
         }
 
         http.end();
@@ -284,11 +283,11 @@ private:
      * @return true Successful data retrieval
      * @return false Failed data retrieval
      */
-    bool getTomorrowTemps(float& highTemp, float& lowTemp, int& icon)
+    bool getTomorrowTemps(float& highTemp, float& lowTemp, String& icon)
     {
         HTTPClient http;
         String url = "http://api.openweathermap.org/data/2.5/forecast"
-            "?lat=" + strLatitude + "&lon=" + strLongitude + "&cnt=18&appid=" + urlEncode(g_ptrSystem->DeviceConfig().GetOpenWeatherAPIKey());
+            "?lat=" + strLatitude + "&lon=" + strLongitude + "&cnt=16&appid=" + urlEncode(g_ptrSystem->DeviceConfig().GetOpenWeatherAPIKey());
         debugI("tomorrowURL: %s", url.c_str());
         http.begin(url);
         int httpResponseCode = http.GET();
@@ -297,9 +296,9 @@ private:
         {
             AllocatedJsonDocument doc(9216);
             String tomorrowJson = http.getString();
-            DeserializationError de = deserializeJson(doc, tomorrowJson);
+            DeserializationError deserializeError = deserializeJson(doc, tomorrowJson);
             String count = doc["cnt"];
-            debugI("Return count %s DE code %s", count.c_str(), de.c_str());
+            debugI("Return count %s DE code %s", count.c_str(), deserializeError.c_str());
             JsonArray list = doc["list"];
 
             // Get tomorrow's date 
@@ -311,7 +310,7 @@ private:
             float localMin = 999.0;
             float localMax = 0.0;
  
-            // Look for the temperature data for tomorrow  - needs more work
+            // Look for the temperature data for tomorrow
             int slot = 0;
             for (size_t i = 0; i < list.size(); i++) 
             {
@@ -327,23 +326,28 @@ private:
                 if (strcmp(dateStr, entryStr) == 0) 
                 {
                     JsonObject main = entry["main"];
-                    if ((main["temp_max"] > 0) && (main["temp_max"] > localMax))
-                        localMax = main["temp_max"];
-                    if ((main["temp_min"] > 0) && (main["temp_min"] < localMin))
-                        localMin = main["temp_min"];
+                    // Identify the maximum of the maximum temperature
+                    float temp_max = main["temp_max"];
+                    if ((temp_max > 0) && (temp_max > localMax))
+                        localMax = temp_max;
+                    // Identify the minimum of the mimimum temperatures
+                    float temp_min = main["temp_min"];
+                    if ((temp_min > 0) && (temp_min < localMin))
+                        localMin = temp_min;
 
                     slot++;
+                    // Use the noon slot for the icon
                     if (slot == 4)
                     {
-                        String iconIdTomorrow = entry["weather"][0]["icon"];
-                        icon = iconIdTomorrow.toInt(); // + (iconIdTomorrow.endsWith("d") ? 0 : 100); // always a day icon}
+                        String iconIndex = entry["weather"][0]["icon"];
+                        icon = iconIndex;
                     }
                 }
             }
             highTemp        = KelvinToLocal(localMax);
             lowTemp         = KelvinToLocal(localMin);
 
-            debugI("Got tomorrow's temps: Lo %d, Hi %d, Icon %d", (int)lowTemp, (int)highTemp, (int)iconTomorrow);
+            debugI("Got tomorrow's temps: Lo %d, Hi %d, Icon %s", (int)lowTemp, (int)highTemp, icon.c_str());
 
             http.end();
             return true;
@@ -375,8 +379,8 @@ private:
             iconToday = -1;
             AllocatedJsonDocument jsonDoc(1024);
             String todayJson = http.getString();
-            DeserializationError de = deserializeJson(jsonDoc, todayJson);
-            debugI("DE code %s", de.c_str());
+            DeserializationError deserializeError = deserializeJson(jsonDoc, todayJson);
+            debugI("DE code %s", deserializeError.c_str());
 
             // Once we have a non-zero temp we can start displaying things
             if (0 < jsonDoc["main"]["temp"])
@@ -387,9 +391,8 @@ private:
             loToday     = KelvinToLocal(jsonDoc["main"]["temp_min"]);
 
             String iconIndex = jsonDoc["weather"][0]["icon"];
-            debugI("icon %s", iconIndex.c_str());
-            iconToday = iconIndex.toInt() + (iconIndex.endsWith("d") ? 0 : 100);
-            debugI("Got today's temps: Now %d Lo %d, Hi %d, Icon %d", (int)temperature, (int)loToday, (int)highToday, (int)iconToday);
+            iconToday = iconIndex;
+            debugI("Got today's temps: Now %d Lo %d, Hi %d, Icon %s", (int)temperature, (int)loToday, (int)highToday, iconToday.c_str());
 
             const char * pszName = jsonDoc["name"];
             if (pszName)
@@ -477,6 +480,14 @@ public:
         g_ptrSystem->NetworkReader().CancelReader(readerIndex);
     }
 
+    /**
+     * @brief Initialize the Graphics base system and any
+     * local items such as network readers
+     * 
+     * @param gfx standard vector of pointers to the graphics base system
+     * @return true or
+     * @return false 
+     */
     bool Init(std::vector<std::shared_ptr<GFXBase>>& gfx) override
     {
         if (!LEDStripEffect::Init(gfx))
@@ -485,6 +496,31 @@ public:
         readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { UpdateWeather(); });
 
         return true;
+    }
+
+    /**
+     * @brief Draw the JPEG Icon from the weatherIcons Map
+     * 
+     * @param iconIndex index of the requested icon
+     * @param iconDay the name of the day: today or tomorrow
+     * @param offset the X offest to draw the icon
+     */
+    void drawIcon(String iconIndex, const char *iconDay, int offset)
+    {
+        // Find the image data in the map
+        auto iconEntry = weatherIcons.find((iconIndex));
+        if (iconEntry != weatherIcons.end())
+        {
+            auto icon = iconEntry->second;
+            // Draw the image
+            JRESULT res = TJpgDec.drawJpg(offset, 10, icon.contents, icon.length);
+            if (JDR_OK != res)        
+                debugE("Could not display %s icon '%s', %d", iconDay, iconIndex.c_str(), res);
+        }
+        else
+        {
+            debugE("Could not find %s icon '%s'", iconDay, iconIndex.c_str());
+        }
     }
 
     void Draw() override
@@ -514,38 +550,9 @@ public:
             g_ptrSystem->NetworkReader().FlagReader(readerIndex);
         }
 
-        if (iconToday != -1)
-        {
-            // Draw the graphics
-            auto iconEntry = weatherIcons.find((iconToday));
-            if (iconEntry != weatherIcons.end())
-            {
-                auto icon = iconEntry->second;
-                JRESULT res = TJpgDec.drawJpg(0, 10, icon.contents, icon.length);
-                if (JDR_OK != res)        // Draw the image
-                    debugW("Could not display today icon %d, %d", iconToday, res);
-            }
-            else
-            {
-                debugW("Could not find today icon %d", iconToday);
-            }
-        }
-
-        if (iconTomorrow != -1)
-        {
-
-            auto iconEntry = weatherIcons.find((iconTomorrow));
-            if (iconEntry != weatherIcons.end())
-            {
-                auto icon = iconEntry->second;
-                if (JDR_OK != TJpgDec.drawJpg(xHalf+1, 10, icon.contents, icon.length))        // Draw the image
-                    debugW("Could not display tomorrow icon %d", iconTomorrow);
-            }
-            else
-            {
-                debugW("Could not find tomorrow icon %d", iconToday);
-            }
-        }
+        // Draw both icons
+        drawIcon(iconToday, "Today", 0);
+        drawIcon(iconTomorrow, "Tomorrow", (xHalf + 1));
 
         // Print the town/city name
 
@@ -556,10 +563,7 @@ public:
         String showLocation = strLocation;
         showLocation.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetOpenWeatherAPIKey().isEmpty())
-        {
             g()->print("No API Key");
-            return;
-        }
         else
             g()->print((strLocationName.isEmpty() ? showLocation : strLocationName).substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
 
