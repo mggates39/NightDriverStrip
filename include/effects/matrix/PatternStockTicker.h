@@ -90,7 +90,9 @@ public:
 };
 
 /**
- * @brief 
+ * @brief This class implements the stock ticker effect
+ * it will show a repeating list of stock symbols,
+ * their high and low values
  * 
  */
 class PatternStockTicker : public LEDStripEffect
@@ -149,6 +151,8 @@ private:
      * @brief Process the list of stock symbols 
      * and build the data structures in PSRAM to hold the data
      * 
+     * @todo This method stills need propper implementation
+     * 
      * @param newSymbols 
      * @return int 
      */
@@ -170,7 +174,8 @@ private:
     }
 
     /**
-     * @brief 
+     * @brief Retrove the 'static' information about the supplied
+     * stock symbol
      * 
      * @return true 
      * @return false 
@@ -242,7 +247,7 @@ private:
     }
 
     /**
-     * @brief Get the Stock Data object
+     * @brief Get the  price data for the supplied stock symbol
      * 
      * @return true 
      * @return false 
@@ -341,7 +346,7 @@ private:
     }
 
     /**
-     * @brief Drive the checking of Stock Data
+     * @brief Drive the actual checking of Stock Data
      * 
      */
     void UpdateStock()
@@ -611,7 +616,7 @@ public:
         g()->drawLine(xHalf + offset, y, xHalf + offset, MATRIX_HEIGHT-1, CRGB(0,0,128));
         y+=2 + fontHeight;
 
-        // Draw the temperature in lighter white
+        // Draw the price data in lighter white
 
         if (dataReady)
         {
@@ -619,25 +624,28 @@ public:
             String strHi( ticker->highPrice);
             String strLo( ticker->lowPrice);
 
-            // Draw today's HI and LO temperatures
+            // Draw current high and low price
 
             x = (xHalf - fontWidth * strHi.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
             g()->print(strHi);
+
             x = (xHalf - fontWidth * strLo.length()) + offset;
             y+= fontHeight;
             g()->setCursor(x,y);
             g()->print(strLo);
 
-            // Draw tomorrow's HI and LO temperatures
-
+            // Draw Open and Close price on the other side
+            
             strHi = String(ticker->openPrice);
             strLo = String(ticker->prevClosePrice);
+
             x = (MATRIX_WIDTH - fontWidth * strHi.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
             g()->print(strHi);
+
             x = (MATRIX_WIDTH - fontWidth * strLo.length()) + offset;
             y+= fontHeight;
             g()->setCursor(x,y);
