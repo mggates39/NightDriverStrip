@@ -210,5 +210,6 @@
 #define PTY_FPS             "fps"
 #define PTY_PRECLEAR        "prc"
 #define PTY_IGNOREGLOBALCOLOR   "igc"
+#define PTY_STOCK_TICKERS   "stk"
 
 #define EFFECTS_CONFIG_FILE "/effects.cfg"

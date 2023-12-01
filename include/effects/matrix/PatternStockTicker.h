@@ -440,8 +440,8 @@ public:
             
         stockTickerList  = DEFAULT_STOCK_TICKERS;
 
-        if (jsonObject.containsKey("stk")) {
-            stockTickerList = jsonObject["stk"].as<String>();
+        if (jsonObject.containsKey(PTY_STOCK_TICKERS)) {
+            stockTickerList = jsonObject[PTY_STOCK_TICKERS].as<String>();
         }
         stockChanged     = true;
         setupDummyTickers();
@@ -501,7 +501,7 @@ public:
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
-        jsonDoc["stk"] = stockTickerList;
+        jsonDoc[PTY_STOCK_TICKERS] = stockTickerList;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
