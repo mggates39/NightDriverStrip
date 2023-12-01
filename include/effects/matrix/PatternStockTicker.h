@@ -188,7 +188,7 @@ private:
 
         if (httpResponseCode <= 0)
         {
-            debugW("Error fetching data for company of for ticker: %s", ticker->strSymbol);
+            debugE("Error fetching data for company of for ticker: %s", ticker->strSymbol);
             http.end();
             return false;
         }
@@ -318,12 +318,16 @@ private:
         }
         else
         {
-            debugW("Error fetching Stock data for Ticker: %s", ticker->strSymbol);
+            debugE("Error fetching Stock data for Ticker: %s", ticker->strSymbol);
             http.end();
             return false;
         }
     }
 
+    /**
+     * @brief The hook called from the network thread
+     * 
+     */
     void StockReader()
     {
         unsigned long msSinceLastCheck = millis() - msLastCheck;
@@ -372,16 +376,7 @@ private:
         for (int i = 0; i < numberTickers; i++) {
             if (updateTickerCode(&tickers[i])) {
                 if (getStockData(&tickers[i]))
-                {
-                    debugW("Got Stock Data");
                     succeededBefore = true;
-                }
-                else
-                {
-                    debugW("Failed to get Stock Data");
-                }
-            } else {
-                debugW("Failed to get Stock Ticker Info");
             }
         }
     }
