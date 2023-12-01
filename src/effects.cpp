@@ -91,9 +91,6 @@
     #include "effects/matrix/PatternSpiro.h"
     #include "effects/matrix/PatternCube.h"
     #include "effects/matrix/PatternCircuit.h"
-#if ENABLE_WIFI
-    #include "effects/matrix/PatternSubscribers.h"
-#endif
     #include "effects/matrix/PatternAlienText.h"
     #include "effects/matrix/PatternRadar.h"
     #include "effects/matrix/PatternPongClock.h"
@@ -103,10 +100,14 @@
     #include "effects/matrix/PatternMisc.h"
     #include "effects/matrix/PatternNoiseSmearing.h"
     #include "effects/matrix/PatternQR.h"
-#if ENABLE_WIFI
+    #include "effects/matrix/PatternAnimatedGIF.h"
+
+  #if ENABLE_WIFI
+    #include "effects/matrix/PatternSubscribers.h"
     #include "effects/matrix/PatternWeather.h"
     #include "effects/matrix/PatternStockTicker.h"
-#endif
+  #endif
+
 #endif  // USE_HUB75
 
 #ifdef USE_WS281X
@@ -200,18 +201,24 @@ void LoadEffectFactories()
     #elif MESMERIZER
 
         #ifndef EFFECT_SET_VERSION
-            #define EFFECT_SET_VERSION  2   // Bump version if default set changes in a meaningful way
+            #define EFFECT_SET_VERSION  4   // Bump version if default set changes in a meaningful way
         #endif
 
         ADD_EFFECT(EFFECT_MATRIX_SPECTRUMBAR,       SpectrumBarEffect,      "Audiograph");
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "AudioWave",  MATRIX_WIDTH,  CRGB(0,0,40),        0, 0, 1.25, 1.25);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum",   NUM_BANDS,     spectrumBasicColors, 100, 0, 0.75, 0.75);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "USA",        NUM_BANDS,     USAColors_p,           0, 0, 0.75, 0.75);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum 2", 32,            spectrumBasicColors, 100, 0, 0.75, 0.75);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum++", NUM_BANDS,     spectrumBasicColors, 0, 40, -1.0, 2.0);
-        ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE,        GhostWave, "GhostWave", 0, 30, false, 10);
-        ADD_EFFECT(EFFECT_MATRIX_SMGAMMA,           PatternSMGamma);
+        ADD_EFFECT_DISABLED(EFFECT_MATRIX_ANIMATEDGIF,       PatternAnimatedGIF,     "Pacman",      GIFIdentifier::Pacman);
+        ADD_EFFECT_DISABLED(EFFECT_MATRIX_ANIMATEDGIF,       PatternAnimatedGIF,     "Three Rings", GIFIdentifier::ThreeRings);
+        ADD_EFFECT_DISABLED(EFFECT_MATRIX_ANIMATEDGIF,       PatternAnimatedGIF,     "Atomic",      GIFIdentifier::Atomic);
+        ADD_EFFECT_DISABLED(EFFECT_MATRIX_ANIMATEDGIF,       PatternAnimatedGIF,     "Bananadance", GIFIdentifier::Banana,        true,               CRGB::DarkBlue);
+
+        ADD_EFFECT_DISABLED(EFFECT_MATRIX_ANIMATEDGIF,       PatternAnimatedGIF,     "Colorball",   GIFIdentifier::ColorSphere);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "AudioWave",  MATRIX_WIDTH,  CRGB(0,0,40),               0, 1.25, 1.25);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum",   NUM_BANDS,     spectrumBasicColors, false, 100, 0, 0.75, 0.75);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "USA",        NUM_BANDS,     USAColors_p,         true,  0, 0, 0.75, 0.75);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum 2", 32,            spectrumBasicColors, false, 100, 0, 0.75, 0.75);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum++", NUM_BANDS,     spectrumBasicColors, false, 0, 40, -1.0, 2.0);
         ADD_EFFECT(EFFECT_MATRIX_SMFIRE2021,        PatternSMFire2021);
+        ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE,        GhostWave,               "GhostWave", 0, 30, false,  10);
+        ADD_EFFECT(EFFECT_MATRIX_SMGAMMA,           PatternSMGamma);
         ADD_EFFECT(EFFECT_MATRIX_SMMETA_BALLS,      PatternSMMetaBalls);
         ADD_EFFECT(EFFECT_MATRIX_SMSUPERNOVA,       PatternSMSupernova);
         ADD_EFFECT(EFFECT_MATRIX_CUBE,              PatternCube);
@@ -309,7 +316,7 @@ void LoadEffectFactories()
     #elif TTGO
 
         // Animate a simple rainbow palette by using the palette effect on the built-in rainbow palette
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Fade", 12, spectrumBasicColors, 50, 70, -1.0, 3.0);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Fade", 12, spectrumBasicColors, false, 50, 70, -1.0, 3.0);
 
     #elif WROVERKIT
 
@@ -365,20 +372,20 @@ void LoadEffectFactories()
 
     #elif SPECTRUM
 
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", NUM_BANDS, spectrumAltColors, 0, 0, 0.5,  1.5);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24, spectrumAltColors, 0, 0, 1.25, 1.25);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24, spectrumAltColors, 0, 0, 0.25,  1.25);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", NUM_BANDS, spectrumAltColors, false, 0, 0, 0.5,  1.5);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24,        spectrumAltColors, false, 0, 0, 1.25, 1.25);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24,        spectrumAltColors, false, 0, 0, 0.25, 1.25);
 
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 16, spectrumAltColors, 0, 0, 1.0, 1.0);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 16,        spectrumAltColors, false, 0, 0, 1.0, 1.0);
 
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 48, CRGB(0,0,4), 0, 0, 1.25, 1.25);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 48,        CRGB(0,0,4),              0, 1.25, 1.25);
 
         ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE, GhostWave, "GhostWave", 0, 16, false, 15);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum USA", 16, USAColors_p, 0);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum USA",      16,        USAColors_p,       true,  0);
         ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE, GhostWave, "GhostWave Rainbow", 8);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Fade", 24, RainbowColors_p, 50, 70, -1.0, 2.0);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Fade",     24,        RainbowColors_p,   false, 50, 70, -1.0, 2.0);
         ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE, GhostWave, "GhostWave Blue", 0);
-        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24, RainbowColors_p);
+        ADD_EFFECT(EFFECT_MATRIX_SPECTRUM_ANALYZER, SpectrumAnalyzerEffect, "Spectrum Standard", 24,        RainbowColors_p,   false);
         ADD_EFFECT(EFFECT_MATRIX_GHOST_WAVE, GhostWave, "GhostWave One", 4);
 
         //make_shared_psram<GhostWave>("GhostWave Rainbow", &rainbowPalette),
