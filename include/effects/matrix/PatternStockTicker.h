@@ -23,9 +23,11 @@
 //
 // Description:
 //
-//   Gets the Stock Data for a given set of Ticker Symbols
+//   Gets the Stock Data for a given set of comman seperated 
+//   Stock Ticker Symbols
 //
-// History:     Jun-04-2023         Gatesm      Adapted from Weather code
+// History: Jun-04-2023     Gatesm      Adapted from Weather code
+//          Aug-15-2030     Gatesm      Modified to support more than one stock symbol
 //
 //---------------------------------------------------------------------------
 
@@ -73,19 +75,21 @@ public:
     char strExchangeName[16];
     char strCurrency[16];
 
-    float  marketCap         = 0.0f;
-    float  sharesOutstanding = 0.0f;
+    bool isValid                = false;
 
-    float  currentPrice      = 0.0f;
-    float  change            = 0.0f;
-    float  percentChange     = 0.0f;
-    float  highPrice         = 0.0f;
-    float  lowPrice          = 0.0f;
-    float  openPrice         = 0.0f;
-    float  prevClosePrice    = 0.0f;
-    long   sampleTime        = 0l;
-    StockTicker* prev        = NULL;
-    StockTicker* next        = NULL;
+    float  marketCap            = 0.0f;
+    float  sharesOutstanding    = 0.0f;
+
+    float  currentPrice         = 0.0f;
+    float  change               = 0.0f;
+    float  percentChange        = 0.0f;
+    float  highPrice            = 0.0f;
+    float  lowPrice             = 0.0f;
+    float  openPrice            = 0.0f;
+    float  prevClosePrice       = 0.0f;
+    long   sampleTime           = 0l;
+    StockTicker* prev           = NULL;
+    StockTicker* next           = NULL;
   
 };
 
@@ -100,20 +104,19 @@ class PatternStockTicker : public LEDStripEffect
 
 private:
 
-    // rework this for dynamic stock list
+    // @todo rework this for dynamic stock list
     StockTicker tickers[3];
-    size_t numberTickers        = 3;
-    StockTicker *currentTicker  = tickers;
+    size_t numberTickers            = 3;
+    StockTicker *currentTicker      = tickers;
 
+    bool   stockChanged             = false;
+    size_t currentOffset            = 0;
+    String stockTickerList          = DEFAULT_STOCK_TICKERS;
+    size_t readerIndex              = std::numeric_limits<size_t>::max();
+    unsigned long msLastCheck       = 0;
+    bool succeededBefore            = false;
+    unsigned long msLastDrawTime    = 0;
 
-    bool   dataReady            = false;
-    bool   stockChanged         = false;
-    size_t currentOffset        = 0;
-    String stockTickerList      = DEFAULT_STOCK_TICKERS;
-    size_t readerIndex          = std::numeric_limits<size_t>::max();
-    unsigned long msLastCheck   = 0;
-    bool succeededBefore        = false;
-    unsigned long msLastUpdate  = 0;
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
     /**
@@ -184,6 +187,7 @@ private:
     {
         HTTPClient http;
         String url;
+        bool dataFound = false;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
               "?symbol=" + urlEncode(ticker->strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
@@ -191,59 +195,62 @@ private:
         http.begin(url);
         int httpResponseCode = http.GET();
 
-        if (httpResponseCode <= 0)
+        if (httpResponseCode > 0)
         {
-            debugE("Error fetching data for company of for ticker: %s", ticker->strSymbol);
-            http.end();
-            return false;
-        }
-        /*
-        {   "country":"US",
-            "currency":"USD",
-            "estimateCurrency":"USD",
-            "exchange":"NASDAQ NMS - GLOBAL MARKET",
-            "finnhubIndustry":"Retail",
-            "ipo":"1997-05-15",
-            "logo":"https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AMZN.svg",
-            "marketCapitalization":1221092.7955074026,
-            "name":"Amazon.com Inc",
-            "phone":"12062661000.0",
-            "shareOutstanding":10260.4,
-            "ticker":"AMZN",
-            "weburl":"https://www.amazon.com/"}
-        */
+            /* Sample returned data
+            {   "country":"US",
+                "currency":"USD",
+                "estimateCurrency":"USD",
+                "exchange":"NASDAQ NMS - GLOBAL MARKET",
+                "finnhubIndustry":"Retail",
+                "ipo":"1997-05-15",
+                "logo":"https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AMZN.svg",
+                "marketCapitalization":1221092.7955074026,
+                "name":"Amazon.com Inc",
+                "phone":"12062661000.0",
+                "shareOutstanding":10260.4,
+                "ticker":"AMZN",
+                "weburl":"https://www.amazon.com/"}
+            */
 
-        AllocatedJsonDocument doc(1024);
-        String headerData = http.getString();
-        debugI("Stock Heder: %s", headerData.c_str());
-        if (headerData.equals("{}")) 
-        {
-            strcpy(ticker->strCompanyName, "Bad Symbol");
-            strcpy(ticker->strExchangeName, "");
-            strcpy(ticker->strCurrency, "");
-            ticker->marketCap         = 0.0;
-            ticker->sharesOutstanding = 0.0;
+            AllocatedJsonDocument doc(1024);
+            String headerData = http.getString();
+            debugI("Stock Heder: %s", headerData.c_str());
+            if (headerData.equals("{}")) 
+            {
+                strcpy(ticker->strCompanyName, "Bad Symbol");
+                strcpy(ticker->strExchangeName, "");
+                strcpy(ticker->strCurrency, "");
+                ticker->isValid           = false;
+                ticker->marketCap         = 0.0;
+                ticker->sharesOutstanding = 0.0;
 
-            debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
-            http.end();
-            return false;
+                debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
+            }
+            else
+            {
+                deserializeJson(doc, headerData);
+                JsonObject companyData =  doc.as<JsonObject>();
+                dataFound = true;
+
+                strcpy(ticker->strSymbol, companyData["ticker"]);
+                strcpy(ticker->strCompanyName, companyData["name"]);
+                strcpy(ticker->strExchangeName, companyData["exchange"]);
+                strcpy(ticker->strCurrency, companyData["currency"]);
+                ticker->marketCap         = companyData["marketCapitalization"].as<float>();
+                ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
+
+                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
+            }
         }
         else
         {
-            deserializeJson(doc, headerData);
-            JsonObject companyData =  doc.as<JsonObject>();
-
-            strcpy(ticker->strSymbol, companyData["ticker"]);
-            strcpy(ticker->strCompanyName, companyData["name"]);
-            strcpy(ticker->strExchangeName, companyData["exchange"]);
-            strcpy(ticker->strCurrency, companyData["currency"]);
-            ticker->marketCap         = companyData["marketCapitalization"].as<float>();
-            ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
-
-            debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
-            http.end();
-            return true;
+            debugE("Error fetching data for company for ticker: %s", ticker->strSymbol);
         }
+
+
+        http.end();
+        return dataFound;
     }
 
     /**
@@ -256,6 +263,7 @@ private:
     {
         HTTPClient http;
         String tickerValue = ticker->strSymbol;
+        bool dataFound = false;
 
         String url = "https://finnhub.io/api/v1/quote"
             "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
@@ -265,7 +273,7 @@ private:
         
         if (httpResponseCode > 0)
         {
-            /*
+            /* Sample returned data
                 {
                     "c":179.58,
                     "d":-1.37,
@@ -283,6 +291,7 @@ private:
             debugI("Stock Data: %s", stockHeader.c_str());
             if (stockHeader.equals("{}")) 
             {
+                ticker->isValid           = false;
                 ticker->currentPrice      = 0.0;
                 ticker->change            = 0.0;
                 ticker->percentChange     = 0.0;
@@ -294,53 +303,63 @@ private:
                 ticker->sharesOutstanding = 0.0;
 
                 debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
-                http.end();
-                return false;
             }
             else
             {
                 deserializeJson(jsonDoc, stockHeader);
                 JsonObject stockData =  jsonDoc.as<JsonObject>();
 
-                // Once we have a non-zero temp we can start displaying things
+                // Once we have a non-zero current price the data is valid
                 if (0 < jsonDoc["c"])
-                    dataReady = true;
+                {
+                    dataFound = true;
 
+                    ticker->isValid           = true;
+                    ticker->currentPrice      = stockData["c"].as<float>();
+                    ticker->change            = stockData["d"].as<float>();
+                    ticker->percentChange     = stockData["dp"].as<float>();
+                    ticker->highPrice         = stockData["h"].as<float>();
+                    ticker->lowPrice          = stockData["l"].as<float>();
+                    ticker->openPrice         = stockData["o"].as<float>();
+                    ticker->prevClosePrice    = stockData["pc"].as<float>();
+                    ticker->sampleTime        = stockData["t"].as<long>();
 
-                ticker->currentPrice      = stockData["c"].as<float>();
-                ticker->change            = stockData["d"].as<float>();
-                ticker->percentChange     = stockData["dp"].as<float>();
-                ticker->highPrice         = stockData["h"].as<float>();
-                ticker->lowPrice          = stockData["l"].as<float>();
-                ticker->openPrice         = stockData["o"].as<float>();
-                ticker->prevClosePrice    = stockData["pc"].as<float>();
-                ticker->sampleTime        = stockData["t"].as<long>();
-
-                debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
-                http.end();
-                return true;
+                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
+                }
             }
         }
         else
         {
             debugE("Error fetching Stock data for Ticker: %s", ticker->strSymbol);
-            http.end();
-            return false;
         }
+
+        http.end();
+        return dataFound;
     }
 
     /**
-     * @brief The hook called from the network thread
+     * @brief The hook called from the network thread to
+     * Update the stock data 
+     * 
      * 
      */
     void StockReader()
     {
         unsigned long msSinceLastCheck = millis() - msLastCheck;
 
+        /*
+         * if the symbols have changed
+         * or last check time is zero (first run)
+         * or we have not had a succesfull data pull and last Check is greater than the error interval
+         * or last check is greater than the check interval
+         */
         if (stockChanged || !msLastCheck
             || (!succeededBefore && msSinceLastCheck > STOCK_CHECK_ERROR_INTERVAL)
             || msSinceLastCheck > STOCK_CHECK_INTERVAL)
         {
+            // Track the check time so that we do not flood the net if we do not
+            // have stocks to check or an API Key
+            msLastCheck = millis();
             UpdateStock();
         }
     }
@@ -356,10 +375,6 @@ private:
             debugW("Skipping Stock update, waiting for WiFi...");
             return;
         }
-
-        // Track the check time so that we do not flood the net if we do not
-        // have stocks to check or an API Key
-        msLastCheck = millis();
 
         if (0 == numberTickers)
         {
@@ -529,11 +544,11 @@ public:
      */
     void Draw() override
     {
-        unsigned long msSinceLastCheck = millis() - msLastUpdate;
+        unsigned long msSinceLastCheck = millis() - msLastDrawTime;
 
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
         {
-            msLastUpdate = millis() ;
+            msLastDrawTime = millis() ;
             currentTicker = currentTicker->next;
             currentOffset = 0;
         // } else {
@@ -594,7 +609,7 @@ public:
 
         // Display the Stock Price, right-justified
 
-        if (dataReady)
+        if (ticker->isValid)
         {
             String strPrice(ticker->currentPrice);
             x = (MATRIX_WIDTH - fontWidth * strPrice.length()) + offset;
@@ -618,7 +633,7 @@ public:
 
         // Draw the price data in lighter white
 
-        if (dataReady)
+        if (ticker->isValid)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
             String strHi( ticker->highPrice);
@@ -685,10 +700,8 @@ public:
     bool SetSetting(const String& name, const String& value) override
     {
         if (name == NAME_OF(stockTickerList) && stockTickerList != value)
-        {
             stockChanged = true;
-            dataReady = false;
-        }
+
         RETURN_IF_SET(name, NAME_OF(stockTickerList), stockTickerList, value);
 
         return LEDStripEffect::SetSetting(name, value);
