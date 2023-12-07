@@ -245,7 +245,7 @@ private:
         }
         else
         {
-            debugE("Error fetching data for company for ticker: %s", ticker->_strSymbol);
+            debugE("Error (%d) fetching company data for ticker: %s", httpResponseCode, ticker->_strSymbol);
         }
 
 
@@ -330,7 +330,7 @@ private:
         }
         else
         {
-            debugE("Error fetching Stock data for Ticker: %s", ticker->_strSymbol);
+            debugE("Error (%d) fetching Stock data for Ticker: %s", httpResponseCode, ticker->_strSymbol);
         }
 
         http.end();
