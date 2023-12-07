@@ -105,9 +105,8 @@ class PatternStockTicker : public LEDStripEffect
 private:
 
     // @todo rework this for dynamic stock list
-    StockTicker _tickers[3];
-    size_t _numberTickers           = 3;
-    StockTicker *_currentTicker     = _tickers;
+    std::vector<StockTicker, psram_allocator<StockTicker>> _tickers = {};
+    StockTicker *_currentTicker    = NULL;
 
     bool   _stockChanged            = false;
     size_t _currentOffset           = 0;
@@ -118,6 +117,7 @@ private:
     unsigned long _msLastDrawTime   = 0;
 
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
+    StockTicker _emptyTicker;
 
     /**
      * @brief The stock ticker is obviously stock data, 
@@ -143,7 +143,7 @@ private:
     /**
      * @brief Does this effect need double buffering?
      * 
-     * @return true 
+     * @return bool - true 
      */
     bool RequiresDoubleBuffering() const override
     {
@@ -349,8 +349,8 @@ private:
         /*
          * if the symbols have changed
          * or last check time is zero (first run)
-         * or we have not had a succesfull data pull and last Check is greater than the error interval
-         * or last check is greater than the check interval
+         * or we have not had a succesfull data pull and last check interval is greater than the error interval
+         * or last check interval is greater than the check interval
          */
         if (_stockChanged || !_msLastCheck
             || (!_succeededBefore && msSinceLastCheck > STOCK_CHECK_ERROR_INTERVAL)
@@ -375,7 +375,7 @@ private:
             return;
         }
 
-        if (0 == _numberTickers)
+        if (_tickers.empty())
         {
             debugW("No Stock Tickers selected, so skipping check...");
             return;
@@ -390,14 +390,15 @@ private:
         if (_stockChanged)
             _succeededBefore = false;
 
-        _stockChanged = false;
-
-        for (int i = 0; i < _numberTickers; i++) {
-            if (updateTickerCode(&_tickers[i])) {
+        for (size_t i = 0; i < _tickers.size(); i++) {
+            bool doUpdateStock = true;
+            if (_stockChanged)
+                doUpdateStock = updateTickerCode(&_tickers[i]);
+            if (doUpdateStock)
                 if (getStockData(&_tickers[i]))
                     _succeededBefore = true;
-            }
         }
+        _stockChanged = false;
     }
 
 protected:
@@ -483,16 +484,21 @@ public:
      */
     void setupDummyTickers()
     {
-        strcpy(_tickers[0]._strSymbol, "AAPL");
+        strcpy(_emptyTicker._strSymbol, "AAPL");
+        _tickers.push_back(_emptyTicker);
+        strcpy(_emptyTicker._strSymbol, "IBM");
+        _tickers.push_back(_emptyTicker);
+        strcpy(_emptyTicker._strSymbol, "MSFT");
+        _tickers.push_back(_emptyTicker);
+
+        // fake double link list for now
         _tickers[0]._nextTicker = &_tickers[1];
         _tickers[0]._prevTicker = &_tickers[2];
-        strcpy(_tickers[1]._strSymbol, "IBM");
         _tickers[1]._nextTicker = &_tickers[2];
         _tickers[1]._prevTicker = &_tickers[0];
-        strcpy(_tickers[2]._strSymbol, "MSFT");
         _tickers[2]._nextTicker = &_tickers[0];
         _tickers[2]._prevTicker = &_tickers[1];
-        _currentTicker = _tickers;
+        _currentTicker = &_tickers[0];
 
     }
 
@@ -502,7 +508,8 @@ public:
      */
     void cleanUpTickerData()
     {
-
+        _tickers.clear();
+        _currentTicker = NULL;
     }
 
     /**
@@ -552,18 +559,12 @@ public:
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
         {
             _msLastDrawTime = millis() ;
-            _currentTicker = _currentTicker->_nextTicker;
+            if (NULL != _currentTicker)
+                _currentTicker = _currentTicker->_nextTicker;
             _currentOffset = 0;
-        // } else {
-        //     if (msSinceLastCheck % 500 == 0) {
-        //         _currentOffset++;
-        //     }
         }
 
         DrawTicker(_currentTicker, _currentOffset);
-        if (_currentOffset > 0) {
-            DrawTicker(_currentTicker->_nextTicker, (_currentOffset-64));
-        }
     }
 
     /**
