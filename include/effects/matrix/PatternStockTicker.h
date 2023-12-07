@@ -70,26 +70,26 @@
 class StockTicker
 {
 public:
-    char strSymbol[12];
-    char strCompanyName[32];
-    char strExchangeName[16];
-    char strCurrency[16];
+    char _strSymbol[12];
+    char _strCompanyName[32];
+    char _strExchangeName[32];
+    char _strCurrency[16];
 
-    bool isValid                = false;
+    bool _isValid               = false;
 
-    float  marketCap            = 0.0f;
-    float  sharesOutstanding    = 0.0f;
+    float  _marketCap           = 0.0f;
+    float  _sharesOutstanding   = 0.0f;
 
-    float  currentPrice         = 0.0f;
-    float  change               = 0.0f;
-    float  percentChange        = 0.0f;
-    float  highPrice            = 0.0f;
-    float  lowPrice             = 0.0f;
-    float  openPrice            = 0.0f;
-    float  prevClosePrice       = 0.0f;
-    long   sampleTime           = 0l;
-    StockTicker* prev           = NULL;
-    StockTicker* next           = NULL;
+    float  _currentPrice        = 0.0f;
+    float  _change              = 0.0f;
+    float  _percentChange       = 0.0f;
+    float  _highPrice           = 0.0f;
+    float  _lowPrice            = 0.0f;
+    float  _openPrice           = 0.0f;
+    float  _prevClosePrice      = 0.0f;
+    long   _sampleTime          = 0l;
+    StockTicker* _prevTicker    = NULL;
+    StockTicker* _nextTicker    = NULL;
   
 };
 
@@ -105,25 +105,25 @@ class PatternStockTicker : public LEDStripEffect
 private:
 
     // @todo rework this for dynamic stock list
-    StockTicker tickers[3];
-    size_t numberTickers            = 3;
-    StockTicker *currentTicker      = tickers;
+    StockTicker _tickers[3];
+    size_t _numberTickers           = 3;
+    StockTicker *_currentTicker     = _tickers;
 
-    bool   stockChanged             = false;
-    size_t currentOffset            = 0;
-    String stockTickerList          = DEFAULT_STOCK_TICKERS;
-    size_t readerIndex              = std::numeric_limits<size_t>::max();
-    unsigned long msLastCheck       = 0;
-    bool succeededBefore            = false;
-    unsigned long msLastDrawTime    = 0;
+    bool   _stockChanged            = false;
+    size_t _currentOffset           = 0;
+    String _stockTickerList         = DEFAULT_STOCK_TICKERS;
+    size_t _readerIndex             = std::numeric_limits<size_t>::max();
+    unsigned long _msLastCheck      = 0;
+    bool _succeededBefore           = false;
+    unsigned long _msLastDrawTime   = 0;
 
-    static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
+    static std::vector<SettingSpec, psram_allocator<SettingSpec>> _mySettingSpecs;
 
     /**
      * @brief The stock ticker is obviously stock data, 
      * and we don't want text overlaid on top of our text
      * 
-     * @return false 
+     * @return bool - false 
      */
     bool ShouldShowTitle() const
     {
@@ -133,7 +133,7 @@ private:
     /**
      * @brief How many frames per second do we need?
      * 
-     * @return size_t 
+     * @return size_t - 10 FPS
      */
     size_t DesiredFramesPerSecond() const override
     {
@@ -156,8 +156,8 @@ private:
      * 
      * @todo This method stills need propper implementation
      * 
-     * @param newSymbols 
-     * @return int 
+     * @param newSymbols String, comma seperated
+     * @return int - number of symbls found
      */
     int ParseTickerSymbols(String newSymbols)
     {
@@ -177,11 +177,11 @@ private:
     }
 
     /**
-     * @brief Retrove the 'static' information about the supplied
+     * @brief Retrieve the 'static' information about the supplied
      * stock symbol
      * 
-     * @return true 
-     * @return false 
+     * @param ticker Pointer to a StockTicker object
+     * @return bool - true if the symbol is found by the API
      */
     bool updateTickerCode(StockTicker *ticker)
     {
@@ -190,7 +190,7 @@ private:
         bool dataFound = false;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
-              "?symbol=" + urlEncode(ticker->strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+              "?symbol=" + urlEncode(ticker->_strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
@@ -218,14 +218,14 @@ private:
             debugI("Stock Heder: %s", headerData.c_str());
             if (headerData.equals("{}")) 
             {
-                strcpy(ticker->strCompanyName, "Bad Symbol");
-                strcpy(ticker->strExchangeName, "");
-                strcpy(ticker->strCurrency, "");
-                ticker->isValid           = false;
-                ticker->marketCap         = 0.0;
-                ticker->sharesOutstanding = 0.0;
+                strcpy(ticker->_strCompanyName, "Bad Symbol");
+                strcpy(ticker->_strExchangeName, "");
+                strcpy(ticker->_strCurrency, "");
+                ticker->_isValid           = false;
+                ticker->_marketCap         = 0.0;
+                ticker->_sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker->_strSymbol);
             }
             else
             {
@@ -233,19 +233,19 @@ private:
                 JsonObject companyData =  doc.as<JsonObject>();
                 dataFound = true;
 
-                strcpy(ticker->strSymbol, companyData["ticker"]);
-                strcpy(ticker->strCompanyName, companyData["name"]);
-                strcpy(ticker->strExchangeName, companyData["exchange"]);
-                strcpy(ticker->strCurrency, companyData["currency"]);
-                ticker->marketCap         = companyData["marketCapitalization"].as<float>();
-                ticker->sharesOutstanding = companyData["shareOutstanding"].as<float>();
+                strcpy(ticker->_strSymbol, companyData["ticker"]);
+                strcpy(ticker->_strCompanyName, companyData["name"]);
+                strcpy(ticker->_strExchangeName, companyData["exchange"]);
+                strcpy(ticker->_strCurrency, companyData["currency"]);
+                ticker->_marketCap         = companyData["marketCapitalization"].as<float>();
+                ticker->_sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
-                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->strSymbol, ticker->strCompanyName, ticker->strExchangeName);
+                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->_strSymbol, ticker->_strCompanyName, ticker->_strExchangeName);
             }
         }
         else
         {
-            debugE("Error fetching data for company for ticker: %s", ticker->strSymbol);
+            debugE("Error fetching data for company for ticker: %s", ticker->_strSymbol);
         }
 
 
@@ -254,15 +254,15 @@ private:
     }
 
     /**
-     * @brief Get the  price data for the supplied stock symbol
+     * @brief Get the price data for the supplied stock symbol
      * 
-     * @return true 
-     * @return false 
+     * @param ticker Pointer to a StockTicker object
+     * @return bool - true if we successfully pulled data for the symbol
      */
     bool getStockData(StockTicker *ticker)
     {
         HTTPClient http;
-        String tickerValue = ticker->strSymbol;
+        String tickerValue = ticker->_strSymbol;
         bool dataFound = false;
 
         String url = "https://finnhub.io/api/v1/quote"
@@ -287,50 +287,50 @@ private:
             */
             
             AllocatedJsonDocument jsonDoc(256);
-            String stockHeader = http.getString();
-            debugI("Stock Data: %s", stockHeader.c_str());
-            if (stockHeader.equals("{}")) 
+            String apiData = http.getString();
+            debugI("Stock Data: %s", apiData.c_str());
+            if (apiData.equals("{}")) 
             {
-                ticker->isValid           = false;
-                ticker->currentPrice      = 0.0;
-                ticker->change            = 0.0;
-                ticker->percentChange     = 0.0;
-                ticker->highPrice         = 0.0;
-                ticker->lowPrice          = 0.0;
-                ticker->openPrice         = 0.0;
-                ticker->prevClosePrice    = 0.0;
-                ticker->sampleTime        = 0.0;
-                ticker->sharesOutstanding = 0.0;
+                ticker->_isValid           = false;
+                ticker->_currentPrice      = 0.0;
+                ticker->_change            = 0.0;
+                ticker->_percentChange     = 0.0;
+                ticker->_highPrice         = 0.0;
+                ticker->_lowPrice          = 0.0;
+                ticker->_openPrice         = 0.0;
+                ticker->_prevClosePrice    = 0.0;
+                ticker->_sampleTime        = 0.0;
+                ticker->_sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker->strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker->_strSymbol);
             }
             else
             {
-                deserializeJson(jsonDoc, stockHeader);
+                deserializeJson(jsonDoc, apiData);
                 JsonObject stockData =  jsonDoc.as<JsonObject>();
 
                 // Once we have a non-zero current price the data is valid
-                if (0 < jsonDoc["c"])
+                if (0 < stockData["c"])
                 {
                     dataFound = true;
 
-                    ticker->isValid           = true;
-                    ticker->currentPrice      = stockData["c"].as<float>();
-                    ticker->change            = stockData["d"].as<float>();
-                    ticker->percentChange     = stockData["dp"].as<float>();
-                    ticker->highPrice         = stockData["h"].as<float>();
-                    ticker->lowPrice          = stockData["l"].as<float>();
-                    ticker->openPrice         = stockData["o"].as<float>();
-                    ticker->prevClosePrice    = stockData["pc"].as<float>();
-                    ticker->sampleTime        = stockData["t"].as<long>();
+                    ticker->_isValid           = true;
+                    ticker->_currentPrice      = stockData["c"].as<float>();
+                    ticker->_change            = stockData["d"].as<float>();
+                    ticker->_percentChange     = stockData["dp"].as<float>();
+                    ticker->_highPrice         = stockData["h"].as<float>();
+                    ticker->_lowPrice          = stockData["l"].as<float>();
+                    ticker->_openPrice         = stockData["o"].as<float>();
+                    ticker->_prevClosePrice    = stockData["pc"].as<float>();
+                    ticker->_sampleTime        = stockData["t"].as<long>();
 
-                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->currentPrice, ticker->lowPrice, ticker->highPrice, ticker->change);
+                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->_currentPrice, ticker->_lowPrice, ticker->_highPrice, ticker->_change);
                 }
             }
         }
         else
         {
-            debugE("Error fetching Stock data for Ticker: %s", ticker->strSymbol);
+            debugE("Error fetching Stock data for Ticker: %s", ticker->_strSymbol);
         }
 
         http.end();
@@ -341,11 +341,10 @@ private:
      * @brief The hook called from the network thread to
      * Update the stock data 
      * 
-     * 
      */
     void StockReader()
     {
-        unsigned long msSinceLastCheck = millis() - msLastCheck;
+        unsigned long msSinceLastCheck = millis() - _msLastCheck;
 
         /*
          * if the symbols have changed
@@ -353,13 +352,13 @@ private:
          * or we have not had a succesfull data pull and last Check is greater than the error interval
          * or last check is greater than the check interval
          */
-        if (stockChanged || !msLastCheck
-            || (!succeededBefore && msSinceLastCheck > STOCK_CHECK_ERROR_INTERVAL)
+        if (_stockChanged || !_msLastCheck
+            || (!_succeededBefore && msSinceLastCheck > STOCK_CHECK_ERROR_INTERVAL)
             || msSinceLastCheck > STOCK_CHECK_INTERVAL)
         {
             // Track the check time so that we do not flood the net if we do not
             // have stocks to check or an API Key
-            msLastCheck = millis();
+            _msLastCheck = millis();
             UpdateStock();
         }
     }
@@ -376,7 +375,7 @@ private:
             return;
         }
 
-        if (0 == numberTickers)
+        if (0 == _numberTickers)
         {
             debugW("No Stock Tickers selected, so skipping check...");
             return;
@@ -388,15 +387,15 @@ private:
             return;
         }
             
-        if (stockChanged)
-            succeededBefore = false;
+        if (_stockChanged)
+            _succeededBefore = false;
 
-        stockChanged = false;
+        _stockChanged = false;
 
-        for (int i = 0; i < numberTickers; i++) {
-            if (updateTickerCode(&tickers[i])) {
-                if (getStockData(&tickers[i]))
-                    succeededBefore = true;
+        for (int i = 0; i < _numberTickers; i++) {
+            if (updateTickerCode(&_tickers[i])) {
+                if (getStockData(&_tickers[i]))
+                    _succeededBefore = true;
             }
         }
     }
@@ -407,29 +406,33 @@ protected:
     /**
      * @brief 
      * 
-     * @return true 
+     * @return bool - true if the settings were saved
      * @return false 
      */
     bool FillSettingSpecs() override
     {
-        if (!LEDStripEffect::FillSettingSpecs())
-            return false;
+        bool settingsSaved = false;
 
-        // Lazily load this class' SettingSpec instances if they haven't been already
-        if (mySettingSpecs.size() == 0)
+        // Save the parent class settings
+        if (LEDStripEffect::FillSettingSpecs()) 
         {
-            mySettingSpecs.emplace_back(
-                NAME_OF(stockTickerList),
-                "Stock Symbols to Show",
-                "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
-                SettingSpec::SettingType::String
-            );
+            // Lazily load this class' SettingSpec instances if they haven't been already
+            if (_mySettingSpecs.size() == 0)
+            {
+                _mySettingSpecs.emplace_back(
+                    NAME_OF(_stockTickerList),
+                    "Stock Symbols to Show",
+                    "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
+                    SettingSpec::SettingType::String
+                );
+            }
+
+            // Add our SettingSpecs reference_wrappers to the base set provided by LEDStripEffect
+            _settingSpecs.insert(_settingSpecs.end(), _mySettingSpecs.begin(), _mySettingSpecs.end());
+
+            settingsSaved = true;
         }
-
-        // Add our SettingSpecs reference_wrappers to the base set provided by LEDStripEffect
-        _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
-
-        return true;
+        return settingsSaved;
     }
 
 public:
@@ -440,8 +443,8 @@ public:
     PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
     {
      
-        stockTickerList  = DEFAULT_STOCK_TICKERS;
-        stockChanged     = true;
+        _stockTickerList  = DEFAULT_STOCK_TICKERS;
+        _stockChanged     = true;
         setupDummyTickers();
     }
 
@@ -453,12 +456,12 @@ public:
     PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
     {
             
-        stockTickerList  = DEFAULT_STOCK_TICKERS;
+        _stockTickerList  = DEFAULT_STOCK_TICKERS;
 
         if (jsonObject.containsKey(PTY_STOCK_TICKERS)) {
-            stockTickerList = jsonObject[PTY_STOCK_TICKERS].as<String>();
+            _stockTickerList = jsonObject[PTY_STOCK_TICKERS].as<String>();
         }
-        stockChanged     = true;
+        _stockChanged     = true;
         setupDummyTickers();
     }
 
@@ -468,7 +471,7 @@ public:
      */
     ~PatternStockTicker()
     {
-        g_ptrSystem->NetworkReader().CancelReader(readerIndex);
+        g_ptrSystem->NetworkReader().CancelReader(_readerIndex);
         cleanUpTickerData();
     }
 
@@ -480,16 +483,16 @@ public:
      */
     void setupDummyTickers()
     {
-        strcpy(tickers[0].strSymbol, "AAPL");
-        tickers[0].next = &tickers[1];
-        tickers[0].prev = &tickers[2];
-        strcpy(tickers[1].strSymbol, "IBM");
-        tickers[1].next = &tickers[2];
-        tickers[1].prev = &tickers[0];
-        strcpy(tickers[2].strSymbol, "MSFT");
-        tickers[2].next = &tickers[0];
-        tickers[2].prev = &tickers[1];
-        currentTicker = tickers;
+        strcpy(_tickers[0]._strSymbol, "AAPL");
+        _tickers[0]._nextTicker = &_tickers[1];
+        _tickers[0]._prevTicker = &_tickers[2];
+        strcpy(_tickers[1]._strSymbol, "IBM");
+        _tickers[1]._nextTicker = &_tickers[2];
+        _tickers[1]._prevTicker = &_tickers[0];
+        strcpy(_tickers[2]._strSymbol, "MSFT");
+        _tickers[2]._nextTicker = &_tickers[0];
+        _tickers[2]._prevTicker = &_tickers[1];
+        _currentTicker = _tickers;
 
     }
 
@@ -503,10 +506,10 @@ public:
     }
 
     /**
-     * @brief 
+     * @brief populate the jsonObject with our settings
      * 
      * @param jsonObject 
-     * @return true 
+     * @return bool - true if the json object is 
      * @return false 
      */
     bool SerializeToJSON(JsonObject& jsonObject) override
@@ -516,7 +519,7 @@ public:
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
-        jsonDoc[PTY_STOCK_TICKERS] = stockTickerList;
+        jsonDoc[PTY_STOCK_TICKERS] = _stockTickerList;
 
         return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
@@ -533,7 +536,7 @@ public:
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { StockReader(); }, STOCK_READER_INTERVAL, true);
+        _readerIndex = g_ptrSystem->NetworkReader().RegisterReader([this] { StockReader(); }, STOCK_READER_INTERVAL, true);
 
         return true;
     }
@@ -544,30 +547,30 @@ public:
      */
     void Draw() override
     {
-        unsigned long msSinceLastCheck = millis() - msLastDrawTime;
+        unsigned long msSinceLastCheck = millis() - _msLastDrawTime;
 
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
         {
-            msLastDrawTime = millis() ;
-            currentTicker = currentTicker->next;
-            currentOffset = 0;
+            _msLastDrawTime = millis() ;
+            _currentTicker = _currentTicker->_nextTicker;
+            _currentOffset = 0;
         // } else {
         //     if (msSinceLastCheck % 500 == 0) {
-        //         currentOffset++;
+        //         _currentOffset++;
         //     }
         }
 
-        DrawTicker(currentTicker, currentOffset);
-        if (currentOffset > 0) {
-            DrawTicker(currentTicker->next, (currentOffset-64));
+        DrawTicker(_currentTicker, _currentOffset);
+        if (_currentOffset > 0) {
+            DrawTicker(_currentTicker->_nextTicker, (_currentOffset-64));
         }
     }
 
     /**
      * @brief Draw the specified ticket data at the proper offset on the panel
      * 
-     * @param ticker 
-     * @param offset 
+     * @param ticker Pointer to the StockTicker object to draw
+     * @param offset For scrolling. Not used at this time
      */
     void DrawTicker(StockTicker *ticker, int offset) 
     {
@@ -577,9 +580,7 @@ public:
 
         g()->fillScreen(BLACK16);
         g()->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, g()->to16bit(CRGB(0,0,128)));
-
         g()->setFont(&Apple5x7);
-
  
         // Print the Company name
 
@@ -590,33 +591,37 @@ public:
 
         if (NULL == ticker) {
             // Tell the user there is no stocks selected and bail
+            g()->setTextColor(YELLOW16);
             g()->print("No Stocks");
             return;
         }
 
-        String showCompany = strlen(ticker->strCompanyName) == 0 ? ticker->strSymbol : ticker->strCompanyName;
-        showCompany.toUpperCase();
         if (g_ptrSystem->DeviceConfig().GetStockTickerAPIKey().isEmpty())
         {
             // Tell the user there is no API Key and bail
+            g()->setTextColor(RED16);
             g()->print("No API Key");
             return;
         }
-        else
-        {
-            g()->print(showCompany.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
-        }
 
-        // Display the Stock Price, right-justified
+        // Display the company name if set otherwise the symbol
 
-        if (ticker->isValid)
+
+        String showCompany = strlen(ticker->_strCompanyName) == 0 ? ticker->_strSymbol : ticker->_strCompanyName;
+        showCompany.toUpperCase();
+        g()->print(showCompany.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+
+        // Display the Stock Price, right-justified 
+        // set the color based on the direction of the last change
+
+        if (ticker->_isValid)
         {
-            String strPrice(ticker->currentPrice);
+            String strPrice(ticker->_currentPrice, 3);
             x = (MATRIX_WIDTH - fontWidth * strPrice.length()) + offset;
             g()->setCursor(x, y);
-            if (ticker->change > 0.0) {
+            if (ticker->_change > 0.0) {
                 g()->setTextColor(GREEN16);
-            } else if (ticker->change < 0.0) {
+            } else if (ticker->_change < 0.0) {
                 g()->setTextColor(RED16);
             } else {
                 g()->setTextColor(WHITE16);
@@ -633,11 +638,11 @@ public:
 
         // Draw the price data in lighter white
 
-        if (ticker->isValid)
+        if (ticker->_isValid)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( ticker->highPrice);
-            String strLo( ticker->lowPrice);
+            String strHi( ticker->_highPrice, 3);
+            String strLo( ticker->_lowPrice, 3);
 
             // Draw current high and low price
 
@@ -653,27 +658,26 @@ public:
 
             // Draw Open and Close price on the other side
             
-            strHi = String(ticker->openPrice);
-            strLo = String(ticker->prevClosePrice);
+            String strOpen = String(ticker->_openPrice, 3);
+            String strClose = String(ticker->_prevClosePrice, 3);
 
-            x = (MATRIX_WIDTH - fontWidth * strHi.length()) + offset;
+            x = (MATRIX_WIDTH - fontWidth * strOpen.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
             g()->setCursor(x,y);
-            g()->print(strHi);
+            g()->print(strOpen);
 
-            x = (MATRIX_WIDTH - fontWidth * strLo.length()) + offset;
+            x = (MATRIX_WIDTH - fontWidth * strClose.length()) + offset;
             y+= fontHeight;
             g()->setCursor(x,y);
-            g()->print(strLo);
+            g()->print(strClose);
         }
     }
 
-     /**
+    /**
      * @brief Update the JSON Object with our current setting values
      * 
-     * @param jsonObject 
-     * @return true 
-     * @return false 
+     * @param jsonObject Reference to the settings JSON object
+     * @return bool - true if json object is populated
      */
     bool SerializeSettingsToJSON(JsonObject& jsonObject) override
     {
@@ -682,7 +686,7 @@ public:
 
         LEDStripEffect::SerializeSettingsToJSON(jsonObject);
 
-        jsonDoc[NAME_OF(stockTickerList)] = stockTickerList;
+        jsonDoc[NAME_OF(_stockTickerList)] = _stockTickerList;
 
         assert(!jsonDoc.overflowed());
         
@@ -699,10 +703,10 @@ public:
      */
     bool SetSetting(const String& name, const String& value) override
     {
-        if (name == NAME_OF(stockTickerList) && stockTickerList != value)
-            stockChanged = true;
+        if (name == NAME_OF(_stockTickerList) && _stockTickerList != value)
+            _stockChanged = true;
 
-        RETURN_IF_SET(name, NAME_OF(stockTickerList), stockTickerList, value);
+        RETURN_IF_SET(name, NAME_OF(_stockTickerList), _stockTickerList, value);
 
         return LEDStripEffect::SetSetting(name, value);
     }
