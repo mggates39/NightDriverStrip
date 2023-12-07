@@ -117,7 +117,7 @@ private:
     bool _succeededBefore           = false;
     unsigned long _msLastDrawTime   = 0;
 
-    static std::vector<SettingSpec, psram_allocator<SettingSpec>> _mySettingSpecs;
+    static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
 
     /**
      * @brief The stock ticker is obviously stock data, 
@@ -417,9 +417,9 @@ protected:
         if (LEDStripEffect::FillSettingSpecs()) 
         {
             // Lazily load this class' SettingSpec instances if they haven't been already
-            if (_mySettingSpecs.size() == 0)
+            if (mySettingSpecs.size() == 0)
             {
-                _mySettingSpecs.emplace_back(
+                mySettingSpecs.emplace_back(
                     NAME_OF(_stockTickerList),
                     "Stock Symbols to Show",
                     "The list of valid Stock Symbol to show, seperated by commas.  May be from any exchange.",
@@ -428,7 +428,7 @@ protected:
             }
 
             // Add our SettingSpecs reference_wrappers to the base set provided by LEDStripEffect
-            _settingSpecs.insert(_settingSpecs.end(), _mySettingSpecs.begin(), _mySettingSpecs.end());
+            _settingSpecs.insert(_settingSpecs.end(), mySettingSpecs.begin(), mySettingSpecs.end());
 
             settingsSaved = true;
         }
