@@ -484,6 +484,9 @@ public:
      */
     void setupDummyTickers()
     {
+        cleanUpTickerData();
+        _tickers.reserve(3);
+
         strcpy(_emptyTicker._strSymbol, "AAPL");
         _tickers.push_back(_emptyTicker);
         strcpy(_emptyTicker._strSymbol, "IBM");
