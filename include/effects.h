@@ -144,7 +144,7 @@
 #define EFFECT_MATRIX_SMWALKING_MACHINE                157
 #define EFFECT_MATRIX_ANIMATEDGIF                      158
 
-#define EFFECT_MATRIX_STOCK_TICKER                     158
+#define EFFECT_MATRIX_STOCK_TICKER                     159
 
 // Hexagon Effects
 #define EFFECT_HEXAGON_OUTER_RING                      201
