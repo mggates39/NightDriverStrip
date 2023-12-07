@@ -592,6 +592,7 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
+        // debugI("company: %d, %d", x, y);
 
         if (NULL == ticker) {
             // Tell the user there is no stocks selected and bail
@@ -613,15 +614,17 @@ public:
 
         String showCompany = strlen(ticker->_strCompanyName) == 0 ? ticker->_strSymbol : ticker->_strCompanyName;
         showCompany.toUpperCase();
-        g()->print(showCompany.substring(0, (MATRIX_WIDTH - 2 * fontWidth)/fontWidth));
+        g()->print(showCompany.substring(0, (MATRIX_WIDTH - fontWidth)/fontWidth));
 
         // Display the Stock Price, right-justified 
         // set the color based on the direction of the last change
 
         if (ticker->_isValid)
         {
-            String strPrice(ticker->_currentPrice, 3);
+            String strPrice(ticker->_currentPrice, 2);
             x = (MATRIX_WIDTH - fontWidth * strPrice.length()) + offset;
+            y +=1 + fontHeight;
+            // debugI("price: %d, %d", x, y);
             g()->setCursor(x, y);
             if (ticker->_change > 0.0) {
                 g()->setTextColor(GREEN16);
@@ -629,7 +632,8 @@ public:
                 g()->setTextColor(RED16);
             } else {
                 g()->setTextColor(WHITE16);
-            }                                                                                                                                                                                                                                                                                                                                      g()->print(strPrice);
+            }
+            g()->print(strPrice);                                                                                                                                                                                                                                                                                                                                   g()->print(strPrice);
         }
 
         // Draw the separator lines
@@ -645,33 +649,37 @@ public:
         if (ticker->_isValid)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( ticker->_highPrice, 3);
-            String strLo( ticker->_lowPrice, 3);
+            String strHi( ticker->_highPrice, 2);
+            String strLo( ticker->_lowPrice, 2);
 
             // Draw current high and low price
 
             x = (xHalf - fontWidth * strHi.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
+            // debugI("high: %d, %d", x, y);
             g()->setCursor(x,y);
             g()->print(strHi);
 
             x = (xHalf - fontWidth * strLo.length()) + offset;
             y+= fontHeight;
+            // debugI("low: %d, %d", x, y);
             g()->setCursor(x,y);
             g()->print(strLo);
 
             // Draw Open and Close price on the other side
             
-            String strOpen = String(ticker->_openPrice, 3);
-            String strClose = String(ticker->_prevClosePrice, 3);
+            String strOpen = String(ticker->_openPrice, 2);
+            String strClose = String(ticker->_prevClosePrice, 2);
 
             x = (MATRIX_WIDTH - fontWidth * strOpen.length()) + offset;
             y = MATRIX_HEIGHT - fontHeight;
+            // debugI("open: %d, %d", x, y);
             g()->setCursor(x,y);
             g()->print(strOpen);
 
             x = (MATRIX_WIDTH - fontWidth * strClose.length()) + offset;
             y+= fontHeight;
+            // debugI("close: %d, %d", x, y);
             g()->setCursor(x,y);
             g()->print(strClose);
         }
