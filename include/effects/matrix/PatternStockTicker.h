@@ -393,12 +393,13 @@ private:
         if (_stockChanged)
             _succeededBefore = false;
 
-        for (size_t i = 0; i < _tickers.size(); i++) {
+        for (auto &ticker : _tickers)
+        {
             bool doUpdateStock = true;
             if (_stockChanged)
-                doUpdateStock = updateTickerCode(&_tickers[i]);
+                doUpdateStock = updateTickerCode(&ticker);
             if (doUpdateStock)
-                if (getStockData(&_tickers[i]))
+                if (getStockData(&ticker))
                     _succeededBefore = true;
         }
         _stockChanged = false;
