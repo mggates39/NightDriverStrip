@@ -53,7 +53,6 @@
 
 // Default stock Ticker symbols for Apple, IBM, and Microsoft 
 #define DEFAULT_STOCK_TICKERS       "AAPL,IBM,MSFT"
-#define MAX_STOCK_TICKER            10
 
 // Update stocks every 10 minutes, retry after 30 seconds on error, and check other things every 5 seconds
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
@@ -61,6 +60,7 @@
 #define STOCK_READER_INTERVAL       5000
 #define STOCK_DISPLAY_INTERVAL      30000
 #define STOCK_TOGGLE_DATA_INTERVAL  5000
+#define NO_STOCK_SELECTED           -1
 
 /**
  * @brief All the data about a specific Stock Ticker
@@ -89,9 +89,6 @@ public:
     float  _openPrice           = 0.0f;
     float  _prevClosePrice      = 0.0f;
     long   _sampleTime          = 0l;
-    StockTicker* _prevTicker    = NULL;
-    StockTicker* _nextTicker    = NULL;
-  
 };
 
 /**
@@ -107,14 +104,15 @@ private:
 
     // @todo rework this for dynamic stock list
     std::vector<StockTicker, psram_allocator<StockTicker>> _tickers = {};
-    StockTicker *_currentTicker    = NULL;
-
+    StockTicker *_currentTicker     = NULL;
+    size_t _currentIndex            = NO_STOCK_SELECTED;
     bool   _stockChanged            = false;
-    size_t _showDataSide            = 0;
     String _stockTickerList         = DEFAULT_STOCK_TICKERS;
+    bool   _succeededBefore         = false;
+
+    size_t _showDataSide            = 0;
     size_t _readerIndex             = std::numeric_limits<size_t>::max();
     unsigned long _msLastCheck      = 0;
-    bool _succeededBefore           = false;
     unsigned long _msLastDrawTime   = 0;
     unsigned long _msLastToggleTime = 0;
 
@@ -151,32 +149,6 @@ private:
     bool RequiresDoubleBuffering() const override
     {
         return true;
-    }
-
-    /**
-     * @brief Process the list of stock symbols 
-     * and build the data structures in PSRAM to hold the data
-     * 
-     * @todo This method stills need propper implementation
-     * 
-     * @param newSymbols String, comma seperated
-     * @return int - number of symbls found
-     */
-    int ParseTickerSymbols(String newSymbols)
-    {
-        char *ptr;
-        const int length = newSymbols.length();
-        char *str = new char[length + 1];
-        strcpy(str, newSymbols.c_str());
-        int n = 0;
-        ptr = strtok(str, ",");
-        while (ptr != NULL)
-        {
-            n++;
-            // cout << ptr  << endl;
-            ptr = strtok (NULL, ",");
-        }
-        return n;
     }
 
     /**
@@ -396,8 +368,10 @@ private:
         for (auto &ticker : _tickers)
         {
             bool doUpdateStock = true;
+
             if (_stockChanged)
                 doUpdateStock = updateTickerCode(&ticker);
+
             if (doUpdateStock)
                 if (getStockData(&ticker))
                     _succeededBefore = true;
@@ -440,73 +414,78 @@ protected:
         return settingsSaved;
     }
 
-public:
     /**
-     * @brief Construct a new Pattern Stock Ticker object
+     * @brief Process the list of stock symbols 
+     * and build the data structures in PSRAM to hold the data
      * 
+     * @param newSymbols String, comma seperated
+     * @return int - number of symbls found
      */
-    PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
+    int LoadNewTickerSymbols(String newSymbols)
     {
-     
-        _stockTickerList  = DEFAULT_STOCK_TICKERS;
-        _stockChanged     = true;
-        setupDummyTickers();
-    }
+        int n = 0;
+        int commaPosition = 0;
+        int startPosition = 0;
 
-    /**
-     * @brief Construct a new Pattern Stock Ticker object
-     * 
-     * @param jsonObject 
-     */
-    PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
-    {
-            
-        _stockTickerList  = DEFAULT_STOCK_TICKERS;
+        if (!newSymbols.isEmpty())
+        {
+            commaPosition = newSymbols.indexOf(',');
+            if ( -1 == commaPosition)
+            {
+                n++;
+                addStockSymbol(newSymbols);
+            }
+            else
+            {
+                while ( -1 != commaPosition) 
+                {
+                    n++;
+                    addStockSymbol(newSymbols.substring(startPosition, commaPosition));
+                    startPosition = commaPosition + 1;
+                    commaPosition = newSymbols.indexOf(',', startPosition);
+                }
+                n++;
+                addStockSymbol(newSymbols.substring(startPosition));
+            }
 
-        if (jsonObject.containsKey(PTY_STOCK_TICKERS)) {
-            _stockTickerList = jsonObject[PTY_STOCK_TICKERS].as<String>();
+            _stockChanged = true;
+            _currentTicker = &_tickers[0];
+            _currentIndex = 0;
         }
-        _stockChanged     = true;
-        setupDummyTickers();
+        return n;
     }
 
     /**
-     * @brief Destroy the Pattern Stock Ticker object
+     * @brief Add the supplied stock symbol to the vector of
+     * stock ticker objects for processing
      * 
+     * @param symbol The exchange ticker symbol for the stock to be added
      */
-    ~PatternStockTicker()
+    void addStockSymbol(const String &symbol)
     {
-        g_ptrSystem->NetworkReader().CancelReader(_readerIndex);
-        cleanUpTickerData();
+        debugI("Creating ticker: %s", symbol.c_str());
+        strcpy(_emptyTicker._strSymbol, symbol.c_str());
+        _tickers.push_back(_emptyTicker);
     }
 
     /**
-     * @brief Placeholder function until I get my string parser set up.
-     * This creates three default tickert for Apple, MicroSoft and IBM.
-     * Then links them in a double circular linked list.
+     * @brief Get the Next Ticker object
      * 
+     * @return StockTicker* - Pointer to the next Stock Ticker object
      */
-    void setupDummyTickers()
+    StockTicker *getNextTicker()
     {
-        cleanUpTickerData();
-        _tickers.reserve(3);
+        StockTicker *nextTicker = NULL;
 
-        strcpy(_emptyTicker._strSymbol, "AAPL");
-        _tickers.push_back(_emptyTicker);
-        strcpy(_emptyTicker._strSymbol, "IBM");
-        _tickers.push_back(_emptyTicker);
-        strcpy(_emptyTicker._strSymbol, "MSFT");
-        _tickers.push_back(_emptyTicker);
-
-        // fake double link list for now
-        _tickers[0]._nextTicker = &_tickers[1];
-        _tickers[0]._prevTicker = &_tickers[2];
-        _tickers[1]._nextTicker = &_tickers[2];
-        _tickers[1]._prevTicker = &_tickers[0];
-        _tickers[2]._nextTicker = &_tickers[0];
-        _tickers[2]._prevTicker = &_tickers[1];
-        _currentTicker = &_tickers[0];
-
+        if (_currentIndex != NO_STOCK_SELECTED)
+        {
+            _currentIndex++;
+            if (_currentIndex >= _tickers.size())
+                _currentIndex = 0;
+            nextTicker = &_tickers[_currentIndex];
+        }
+        
+        return nextTicker;
     }
 
     /**
@@ -517,6 +496,43 @@ public:
     {
         _tickers.clear();
         _currentTicker = NULL;
+        _currentIndex = NO_STOCK_SELECTED;
+    }
+
+public:
+    /**
+     * @brief Construct a new Pattern Stock Ticker object
+     * 
+     */
+    PatternStockTicker() : LEDStripEffect(EFFECT_MATRIX_STOCK_TICKER, "Stock")
+    {
+        LoadNewTickerSymbols(DEFAULT_STOCK_TICKERS);
+    }
+
+    /**
+     * @brief Construct a new Pattern Stock Ticker object
+     * 
+     * @param jsonObject 
+     */
+    PatternStockTicker(const JsonObjectConst&  jsonObject) : LEDStripEffect(jsonObject)
+    {
+        String storedStockList  = DEFAULT_STOCK_TICKERS;
+
+        if (jsonObject.containsKey(PTY_STOCK_TICKERS)) {
+            storedStockList = jsonObject[PTY_STOCK_TICKERS].as<String>();
+        }
+
+        LoadNewTickerSymbols(storedStockList);
+    }
+
+    /**
+     * @brief Destroy the Pattern Stock Ticker object
+     * 
+     */
+    ~PatternStockTicker()
+    {
+        g_ptrSystem->NetworkReader().CancelReader(_readerIndex);
+        cleanUpTickerData();
     }
 
     /**
@@ -541,9 +557,8 @@ public:
     /**
      * @brief Initialize the LED Strip Effect class and register the Network Reader task
      * 
-     * @param gfx 
-     * @return true 
-     * @return false 
+     * @param gfx Base Graphics FX System
+     * @return bool - true if effect is initialized
      */
     bool Init(std::vector<std::shared_ptr<GFXBase>>& gfx) override
     {
@@ -568,9 +583,9 @@ public:
         {
             _msLastDrawTime = millis();
             _msLastToggleTime = _msLastDrawTime;
-            if (NULL != _currentTicker)
-                _currentTicker = _currentTicker->_nextTicker;
+            _currentTicker = getNextTicker();
             _showDataSide = 0;
+            debugI("Now Drawing %s", _currentTicker->_strCompanyName);
         }
         else
         {
