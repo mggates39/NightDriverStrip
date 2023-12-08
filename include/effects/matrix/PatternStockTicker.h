@@ -59,7 +59,8 @@
 #define STOCK_CHECK_INTERVAL        (10 * 60000)
 #define STOCK_CHECK_ERROR_INTERVAL  30000
 #define STOCK_READER_INTERVAL       5000
-#define STOCK_DISPLAY_INTERVAL      32000
+#define STOCK_DISPLAY_INTERVAL      30000
+#define STOCK_TOGGLE_DATA_INTERVAL  5000
 
 /**
  * @brief All the data about a specific Stock Ticker
@@ -109,19 +110,21 @@ private:
     StockTicker *_currentTicker    = NULL;
 
     bool   _stockChanged            = false;
-    size_t _currentOffset           = 0;
+    size_t _showDataSide            = 0;
     String _stockTickerList         = DEFAULT_STOCK_TICKERS;
     size_t _readerIndex             = std::numeric_limits<size_t>::max();
     unsigned long _msLastCheck      = 0;
     bool _succeededBefore           = false;
     unsigned long _msLastDrawTime   = 0;
+    unsigned long _msLastToggleTime = 0;
 
     static std::vector<SettingSpec, psram_allocator<SettingSpec>> mySettingSpecs;
     StockTicker _emptyTicker;
 
     /**
-     * @brief The stock ticker is obviously stock data, 
-     * and we don't want text overlaid on top of our text
+     * @brief Should this effect show its title?
+     * The stock ticker is obviously stock data, 
+     * and we don't want text overlaid on top of our text.
      * 
      * @return bool - false 
      */
@@ -131,7 +134,7 @@ private:
     }
 
     /**
-     * @brief How many frames per second do we need?
+     * @brief How many frames per second does this effect want?
      * 
      * @return size_t - 10 FPS
      */
@@ -141,7 +144,7 @@ private:
     }
 
     /**
-     * @brief Does this effect need double buffering?
+     * @brief Does this effect requre double buffering support?
      * 
      * @return bool - true 
      */
@@ -557,30 +560,40 @@ public:
      */
     void Draw() override
     {
-        unsigned long msSinceLastCheck = millis() - _msLastDrawTime;
+        unsigned long msSinceLastCheck  = millis() - _msLastDrawTime;
+        unsigned long msSinceLastToggle = millis() - _msLastToggleTime;
 
         if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
         {
-            _msLastDrawTime = millis() ;
+            _msLastDrawTime = millis();
+            _msLastToggleTime = _msLastDrawTime;
             if (NULL != _currentTicker)
                 _currentTicker = _currentTicker->_nextTicker;
-            _currentOffset = 0;
+            _showDataSide = 0;
+        }
+        else
+        {
+            if (msSinceLastToggle >= STOCK_TOGGLE_DATA_INTERVAL)
+            {
+                _msLastToggleTime = millis();
+                _showDataSide = _showDataSide ^ 1;
+            }
         }
 
-        DrawTicker(_currentTicker, _currentOffset);
+        DrawTicker(_currentTicker, _showDataSide);
     }
 
     /**
-     * @brief Draw the specified ticket data at the proper offset on the panel
+     * @brief Draw the specified ticker data on the panel
      * 
      * @param ticker Pointer to the StockTicker object to draw
-     * @param offset For scrolling. Not used at this time
+     * @param dataOffset Determines which data set is shown 0 = hi/low, 1 = open/close
      */
-    void DrawTicker(StockTicker *ticker, int offset) 
+    void DrawTicker(StockTicker *ticker, int dataOffset) 
     {
         const int fontHeight = 7;
         const int fontWidth  = 5;
-        const int xHalf      = (MATRIX_WIDTH / 2 - 1) + offset;
+        const int xHalf      = MATRIX_WIDTH / 2 - 1;
 
         g()->fillScreen(BLACK16);
         g()->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, g()->to16bit(CRGB(0,0,128)));
@@ -588,7 +601,7 @@ public:
  
         // Print the Company name
 
-        int x = offset;
+        int x = 0;
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
@@ -609,22 +622,21 @@ public:
             return;
         }
 
-        // Display the company name if set otherwise the symbol
+        // Display the stock symbol
 
-
-        String showCompany = strlen(ticker->_strCompanyName) == 0 ? ticker->_strSymbol : ticker->_strCompanyName;
+        String showCompany = ticker->_strSymbol;
         showCompany.toUpperCase();
         g()->print(showCompany.substring(0, (MATRIX_WIDTH - fontWidth)/fontWidth));
 
-        // Display the Stock Price, right-justified 
+        // Display the Stock Price 
         // set the color based on the direction of the last change
 
         if (ticker->_isValid)
         {
-            String strPrice(ticker->_currentPrice, 2);
-            x = (MATRIX_WIDTH - fontWidth * strPrice.length()) + offset;
-            y +=1 + fontHeight;
-            // debugI("price: %d, %d", x, y);
+            String strPrice(ticker->_currentPrice, 3);
+            x = 1;
+            y += fontHeight + 1;
+            // debugI("price: x: %d, y: %d, len: %d", x, y, strPrice.length());
             g()->setCursor(x, y);
             if (ticker->_change > 0.0) {
                 g()->setTextColor(GREEN16);
@@ -633,6 +645,7 @@ public:
             } else {
                 g()->setTextColor(WHITE16);
             }
+            g()->print("Pr: ");
             g()->print(strPrice);                                                                                                                                                                                                                                                                                                                                   g()->print(strPrice);
         }
 
@@ -641,47 +654,54 @@ public:
         y+=1;
 
         g()->drawLine(0, y, MATRIX_WIDTH-1, y, CRGB(0,0,128));
-        g()->drawLine(xHalf + offset, y, xHalf + offset, MATRIX_HEIGHT-1, CRGB(0,0,128));
-        y+=2 + fontHeight;
 
         // Draw the price data in lighter white
 
         if (ticker->_isValid)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            String strHi( ticker->_highPrice, 2);
-            String strLo( ticker->_lowPrice, 2);
+            if (dataOffset == 0)
+            {
+                // Draw current high and low price
 
-            // Draw current high and low price
+                String strHi( ticker->_highPrice, 3);
+                String strLo( ticker->_lowPrice, 3);
 
-            x = (xHalf - fontWidth * strHi.length()) + offset;
-            y = MATRIX_HEIGHT - fontHeight;
-            // debugI("high: %d, %d", x, y);
-            g()->setCursor(x,y);
-            g()->print(strHi);
+                x = 2;
+                y += fontHeight;
+                // debugI("high: x: %d, y: %d, len: %d", x, y, strHi.length());
+                g()->setCursor(x,y);
+                g()->print("Hi: ");
+                g()->print(strHi);
 
-            x = (xHalf - fontWidth * strLo.length()) + offset;
-            y+= fontHeight;
-            // debugI("low: %d, %d", x, y);
-            g()->setCursor(x,y);
-            g()->print(strLo);
+                x = 2;
+                y+= fontHeight;
+                // debugI("low: x: %d, y: %d, len: %d", x, y, strLo.length());
+                g()->setCursor(x,y);
+                g()->print("Lo: ");
+                g()->print(strLo);
+            }
+            else
+            {
+                // Draw Open and Close price
+                
+                String strOpen = String(ticker->_openPrice, 3);
+                String strClose = String(ticker->_prevClosePrice, 3);
 
-            // Draw Open and Close price on the other side
-            
-            String strOpen = String(ticker->_openPrice, 2);
-            String strClose = String(ticker->_prevClosePrice, 2);
+                x = 2;
+                y += fontHeight;
+                // debugI("open: x: %d, y: %d, len: %d", x, y, strOpen.length());
+                g()->setCursor(x,y);
+                g()->print("Op: ");
+                g()->print(strOpen);
 
-            x = (MATRIX_WIDTH - fontWidth * strOpen.length()) + offset;
-            y = MATRIX_HEIGHT - fontHeight;
-            // debugI("open: %d, %d", x, y);
-            g()->setCursor(x,y);
-            g()->print(strOpen);
-
-            x = (MATRIX_WIDTH - fontWidth * strClose.length()) + offset;
-            y+= fontHeight;
-            // debugI("close: %d, %d", x, y);
-            g()->setCursor(x,y);
-            g()->print(strClose);
+                x = 2;
+                y+= fontHeight;
+                // debugI("close: x: %d, y: %d, len: %d", x, y, strClose.length());
+                g()->setCursor(x,y);
+                g()->print("Cl: ");
+                g()->print(strClose);
+            }
         }
     }
 
