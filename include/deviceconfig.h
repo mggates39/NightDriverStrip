@@ -79,7 +79,7 @@ class DeviceConfig : public IJSONSerializable
     CRGB    globalColor = CRGB::Red;
     bool    applyGlobalColors = false;
     CRGB    secondColor = CRGB::Red;
-    String stockTickerApiKey = cszStockTickerAPIKey;
+    String  stockTickerApiKey = cszStockTickerAPIKey;
 
     std::vector<SettingSpec, psram_allocator<SettingSpec>> settingSpecs;
     std::vector<std::reference_wrapper<SettingSpec>> settingSpecReferences;
@@ -322,8 +322,9 @@ class DeviceConfig : public IJSONSerializable
             );
             powerLimitSpec.MinimumValue = POWER_LIMIT_MIN;
             powerLimitSpec.HasValidation = true;
-            auto stockTickerSpec = settingSpecs.emplace_back(
-                NAME_OF(stockTickerApiKey),
+
+            auto& stockTickerSpec = settingSpecs.emplace_back(
+                StockTickerApiKeyTag,
                 "FinnHub Stock Ticker API key",
                 "The API key for the <a href=\"https://finnhub.io/docs/api/introduction\">Finnhub API provided by Finnhub.io</a>.",
                 SettingSpec::SettingType::String
