@@ -531,6 +531,7 @@ void CWebServer::SetSettingsIfPresent(AsyncWebServerRequest * pRequest)
     deviceConfig.ApplyColorSettings(globalColor, secondColor,
                                     IsPostParamTrue(pRequest, DeviceConfig::ClearGlobalColorTag),
                                     IsPostParamTrue(pRequest, DeviceConfig::ApplyGlobalColorsTag));
+                                    
     PushPostParamIfPresent<String>(pRequest, DeviceConfig::StockTickerApiKeyTag, SET_VALUE(deviceConfig.SetStockTickerAPIKey(value)));
 }
 

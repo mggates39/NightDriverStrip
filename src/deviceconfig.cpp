@@ -200,6 +200,7 @@ void DeviceConfig::ApplyColorSettings(std::optional<CRGB> newGlobalColor, std::o
     else if (forceApplyGlobalColor)
         g_ptrSystem->EffectManager().ApplyGlobalColor(finalGlobalColor);
 }
+
 DeviceConfig::ValidateResponse DeviceConfig::ValidateStockTickerAPIKey(const String &newStockTickerAPIKey)
 {
     HTTPClient http;

@@ -165,7 +165,8 @@ class DeviceConfig : public IJSONSerializable
         jsonDoc[ApplyGlobalColorsTag] = applyGlobalColors;
         jsonDoc[SecondColorTag] = secondColor;
 
-        if (includeSensitive) {
+        if (includeSensitive)
+        {
             jsonDoc[OpenWeatherApiKeyTag] = openWeatherApiKey;
             jsonDoc[StockTickerApiKeyTag] = stockTickerApiKey;
         }
