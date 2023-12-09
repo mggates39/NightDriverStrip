@@ -155,17 +155,17 @@ private:
      * @brief Retrieve the 'static' information about the supplied
      * stock symbol
      * 
-     * @param ticker Pointer to a StockTicker object
+     * @param ticker Reference to a StockTicker object
      * @return bool - true if the symbol is found by the API
      */
-    bool updateTickerCode(StockTicker *ticker)
+    bool updateTickerCode(StockTicker &ticker)
     {
         HTTPClient http;
         String url;
         bool dataFound = false;
 
         url = "https://finnhub.io/api/v1/stock/profile2"
-              "?symbol=" + urlEncode(ticker->_strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+              "?symbol=" + urlEncode(ticker._strSymbol) + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
@@ -193,14 +193,14 @@ private:
             debugI("Stock Heder: %s", headerData.c_str());
             if (headerData.equals("{}")) 
             {
-                strcpy(ticker->_strCompanyName, "Bad Symbol");
-                strcpy(ticker->_strExchangeName, "");
-                strcpy(ticker->_strCurrency, "");
-                ticker->_isValid           = false;
-                ticker->_marketCap         = 0.0;
-                ticker->_sharesOutstanding = 0.0;
+                strcpy(ticker._strCompanyName, "Bad Symbol");
+                strcpy(ticker._strExchangeName, "");
+                strcpy(ticker._strCurrency, "");
+                ticker._isValid           = false;
+                ticker._marketCap         = 0.0;
+                ticker._sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker->_strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker._strSymbol);
             }
             else
             {
@@ -208,19 +208,19 @@ private:
                 JsonObject companyData =  doc.as<JsonObject>();
                 dataFound = true;
 
-                strcpy(ticker->_strSymbol, companyData["ticker"]);
-                strcpy(ticker->_strCompanyName, companyData["name"]);
-                strcpy(ticker->_strExchangeName, companyData["exchange"]);
-                strcpy(ticker->_strCurrency, companyData["currency"]);
-                ticker->_marketCap         = companyData["marketCapitalization"].as<float>();
-                ticker->_sharesOutstanding = companyData["shareOutstanding"].as<float>();
+                strcpy(ticker._strSymbol, companyData["ticker"]);
+                strcpy(ticker._strCompanyName, companyData["name"]);
+                strcpy(ticker._strExchangeName, companyData["exchange"]);
+                strcpy(ticker._strCurrency, companyData["currency"]);
+                ticker._marketCap         = companyData["marketCapitalization"].as<float>();
+                ticker._sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
-                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker->_strSymbol, ticker->_strCompanyName, ticker->_strExchangeName);
+                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker._strSymbol, ticker._strCompanyName, ticker._strExchangeName);
             }
         }
         else
         {
-            debugE("Error (%d) fetching company data for ticker: %s", httpResponseCode, ticker->_strSymbol);
+            debugE("Error (%d) fetching company data for ticker: %s", httpResponseCode, ticker._strSymbol);
         }
 
 
@@ -231,17 +231,16 @@ private:
     /**
      * @brief Get the price data for the supplied stock symbol
      * 
-     * @param ticker Pointer to a StockTicker object
+     * @param ticker Reference to a StockTicker object
      * @return bool - true if we successfully pulled data for the symbol
      */
-    bool getStockData(StockTicker *ticker)
+    bool getStockData(StockTicker &ticker)
     {
         HTTPClient http;
-        String tickerValue = ticker->_strSymbol;
         bool dataFound = false;
 
         String url = "https://finnhub.io/api/v1/quote"
-            "?symbol=" + tickerValue  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
+            "?symbol=" + urlEncode(ticker._strSymbol)  + "&token=" + urlEncode(g_ptrSystem->DeviceConfig().GetStockTickerAPIKey());
 
         http.begin(url);
         int httpResponseCode = http.GET();
@@ -266,18 +265,18 @@ private:
             debugI("Stock Data: %s", apiData.c_str());
             if (apiData.equals("{}")) 
             {
-                ticker->_isValid           = false;
-                ticker->_currentPrice      = 0.0;
-                ticker->_change            = 0.0;
-                ticker->_percentChange     = 0.0;
-                ticker->_highPrice         = 0.0;
-                ticker->_lowPrice          = 0.0;
-                ticker->_openPrice         = 0.0;
-                ticker->_prevClosePrice    = 0.0;
-                ticker->_sampleTime        = 0.0;
-                ticker->_sharesOutstanding = 0.0;
+                ticker._isValid           = false;
+                ticker._currentPrice      = 0.0;
+                ticker._change            = 0.0;
+                ticker._percentChange     = 0.0;
+                ticker._highPrice         = 0.0;
+                ticker._lowPrice          = 0.0;
+                ticker._openPrice         = 0.0;
+                ticker._prevClosePrice    = 0.0;
+                ticker._sampleTime        = 0.0;
+                ticker._sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker->_strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker._strSymbol);
             }
             else
             {
@@ -289,23 +288,23 @@ private:
                 {
                     dataFound = true;
 
-                    ticker->_isValid           = true;
-                    ticker->_currentPrice      = stockData["c"].as<float>();
-                    ticker->_change            = stockData["d"].as<float>();
-                    ticker->_percentChange     = stockData["dp"].as<float>();
-                    ticker->_highPrice         = stockData["h"].as<float>();
-                    ticker->_lowPrice          = stockData["l"].as<float>();
-                    ticker->_openPrice         = stockData["o"].as<float>();
-                    ticker->_prevClosePrice    = stockData["pc"].as<float>();
-                    ticker->_sampleTime        = stockData["t"].as<long>();
+                    ticker._isValid           = true;
+                    ticker._currentPrice      = stockData["c"].as<float>();
+                    ticker._change            = stockData["d"].as<float>();
+                    ticker._percentChange     = stockData["dp"].as<float>();
+                    ticker._highPrice         = stockData["h"].as<float>();
+                    ticker._lowPrice          = stockData["l"].as<float>();
+                    ticker._openPrice         = stockData["o"].as<float>();
+                    ticker._prevClosePrice    = stockData["pc"].as<float>();
+                    ticker._sampleTime        = stockData["t"].as<long>();
 
-                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker->_currentPrice, ticker->_lowPrice, ticker->_highPrice, ticker->_change);
+                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker._currentPrice, ticker._lowPrice, ticker._highPrice, ticker._change);
                 }
             }
         }
         else
         {
-            debugE("Error (%d) fetching Stock data for Ticker: %s", httpResponseCode, ticker->_strSymbol);
+            debugE("Error (%d) fetching Stock data for Ticker: %s", httpResponseCode, ticker._strSymbol);
         }
 
         http.end();
@@ -370,10 +369,10 @@ private:
             bool doUpdateStock = true;
 
             if (_stockChanged)
-                doUpdateStock = updateTickerCode(&ticker);
+                doUpdateStock = updateTickerCode(ticker);
 
             if (doUpdateStock)
-                if (getStockData(&ticker))
+                if (getStockData(ticker))
                     _succeededBefore = true;
         }
         _stockChanged = false;
@@ -484,7 +483,7 @@ protected:
                 _currentIndex = 0;
             nextTicker = &_tickers[_currentIndex];
         }
-        
+
         return nextTicker;
     }
 
