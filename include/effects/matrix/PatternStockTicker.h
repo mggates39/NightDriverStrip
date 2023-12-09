@@ -71,10 +71,10 @@
 class StockTicker
 {
 public:
-    char _strSymbol[12];
-    char _strCompanyName[32];
-    char _strExchangeName[32];
-    char _strCurrency[16];
+    String _strSymbol;
+    String _strCompanyName;
+    String _strExchangeName;
+    String _strCurrency;
 
     bool _isValid               = false;
 
@@ -193,14 +193,14 @@ private:
             debugI("Stock Heder: %s", headerData.c_str());
             if (headerData.equals("{}")) 
             {
-                strcpy(ticker._strCompanyName, "Bad Symbol");
-                strcpy(ticker._strExchangeName, "");
-                strcpy(ticker._strCurrency, "");
+                ticker._strCompanyName    = "Bad Symbol";
+                ticker._strExchangeName   = "";
+                ticker._strCurrency       = "";
                 ticker._isValid           = false;
                 ticker._marketCap         = 0.0;
                 ticker._sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker._strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker._strSymbol.c_str());
             }
             else
             {
@@ -208,19 +208,22 @@ private:
                 JsonObject companyData =  doc.as<JsonObject>();
                 dataFound = true;
 
-                strcpy(ticker._strSymbol, companyData["ticker"]);
-                strcpy(ticker._strCompanyName, companyData["name"]);
-                strcpy(ticker._strExchangeName, companyData["exchange"]);
-                strcpy(ticker._strCurrency, companyData["currency"]);
+                ticker._strSymbol         = companyData["ticker"].as<String>();
+                ticker._strCompanyName    = companyData["name"].as<String>();
+                ticker._strExchangeName   = companyData["exchange"].as<String>();
+                ticker._strCurrency       = companyData["currency"].as<String>();
                 ticker._marketCap         = companyData["marketCapitalization"].as<float>();
                 ticker._sharesOutstanding = companyData["shareOutstanding"].as<float>();
 
-                debugI("Got ticker header: sym %s Company %s, Exchange %s", ticker._strSymbol, ticker._strCompanyName, ticker._strExchangeName);
+                debugI("Got ticker header: sym %s Company %s, Exchange %s", 
+                        ticker._strSymbol.c_str(), ticker._strCompanyName.c_str(), 
+                        ticker._strExchangeName.c_str());
             }
         }
         else
         {
-            debugE("Error (%d) fetching company data for ticker: %s", httpResponseCode, ticker._strSymbol);
+            debugE("Error (%d) fetching company data for ticker: %s", 
+                    httpResponseCode, ticker._strSymbol.c_str());
         }
 
 
@@ -276,7 +279,7 @@ private:
                 ticker._sampleTime        = 0.0;
                 ticker._sharesOutstanding = 0.0;
 
-                debugW("Bad ticker symbol: '%s'", ticker._strSymbol);
+                debugW("Bad ticker symbol: '%s'", ticker._strSymbol.c_str());
             }
             else
             {
@@ -298,13 +301,16 @@ private:
                     ticker._prevClosePrice    = stockData["pc"].as<float>();
                     ticker._sampleTime        = stockData["t"].as<long>();
 
-                    debugI("Got ticker data: Now %f Lo %f, Hi %f, Change %f", ticker._currentPrice, ticker._lowPrice, ticker._highPrice, ticker._change);
+                    debugI("Got ticker data: %s Now %f Lo %f, Hi %f, Change %f", 
+                            ticker._strSymbol.c_str(), ticker._currentPrice, 
+                            ticker._lowPrice, ticker._highPrice, ticker._change);
                 }
             }
         }
         else
         {
-            debugE("Error (%d) fetching Stock data for Ticker: %s", httpResponseCode, ticker._strSymbol);
+            debugE("Error (%d) fetching Stock data for Ticker: %s", 
+                    httpResponseCode, ticker._strSymbol.c_str());
         }
 
         http.end();
@@ -463,7 +469,7 @@ protected:
     void addStockSymbol(const String &symbol)
     {
         debugI("Creating ticker: %s", symbol.c_str());
-        strcpy(_emptyTicker._strSymbol, symbol.c_str());
+        _emptyTicker._strSymbol = symbol;
         _tickers.push_back(_emptyTicker);
     }
 
@@ -584,7 +590,7 @@ public:
             _msLastToggleTime = _msLastDrawTime;
             _currentTicker = getNextTicker();
             _showDataSide = 0;
-            debugI("Now Drawing %s", _currentTicker->_strCompanyName);
+            debugI("Now Drawing %s", _currentTicker->_strCompanyName.c_str());
         }
         else
         {
@@ -620,7 +626,6 @@ public:
         int y = fontHeight + 1;
         g()->setCursor(x, y);
         g()->setTextColor(WHITE16);
-        // debugI("company: %d, %d", x, y);
 
         if (NULL == ticker) {
             // Tell the user there is no stocks selected and bail
@@ -651,7 +656,7 @@ public:
             String strPrice(ticker->_currentPrice, 3);
             x = 1;
             y += fontHeight + 1;
-            // debugI("price: x: %d, y: %d, len: %d", x, y, strPrice.length());
+
             g()->setCursor(x, y);
             if (ticker->_change > 0.0) {
                 g()->setTextColor(GREEN16);
@@ -684,14 +689,14 @@ public:
 
                 x = 2;
                 y += fontHeight;
-                // debugI("high: x: %d, y: %d, len: %d", x, y, strHi.length());
+
                 g()->setCursor(x,y);
                 g()->print("Hi: ");
                 g()->print(strHi);
 
                 x = 2;
                 y+= fontHeight;
-                // debugI("low: x: %d, y: %d, len: %d", x, y, strLo.length());
+
                 g()->setCursor(x,y);
                 g()->print("Lo: ");
                 g()->print(strLo);
@@ -705,14 +710,14 @@ public:
 
                 x = 2;
                 y += fontHeight;
-                // debugI("open: x: %d, y: %d, len: %d", x, y, strOpen.length());
+
                 g()->setCursor(x,y);
                 g()->print("Op: ");
                 g()->print(strOpen);
 
                 x = 2;
                 y+= fontHeight;
-                // debugI("close: x: %d, y: %d, len: %d", x, y, strClose.length());
+
                 g()->setCursor(x,y);
                 g()->print("Cl: ");
                 g()->print(strClose);
