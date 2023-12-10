@@ -401,7 +401,7 @@ protected:
         if (LEDStripEffect::FillSettingSpecs()) 
         {
             // Lazily load this class' SettingSpec instances if they haven't been already
-            if (mySettingSpecs.size() == 0)
+            if (0 == mySettingSpecs.size())
             {
                 mySettingSpecs.emplace_back(
                     NAME_OF(_stockTickerList),
@@ -482,7 +482,7 @@ protected:
     {
         StockTicker *nextTicker = NULL;
 
-        if (_currentIndex != NO_STOCK_SELECTED)
+        if (NO_STOCK_SELECTED != _currentIndex)
         {
             _currentIndex++;
             if (_currentIndex >= _tickers.size())
@@ -680,7 +680,7 @@ public:
         if (ticker->_isValid)
         {
             g()->setTextColor(g()->to16bit(CRGB(192,192,192)));
-            if (dataOffset == 0)
+            if (0 == dataOffset)
             {
                 // Draw current high and low price
 
