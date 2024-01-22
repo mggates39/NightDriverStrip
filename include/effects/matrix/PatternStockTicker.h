@@ -68,6 +68,7 @@ public:
     String _strCompanyName;
     String _strExchangeName;
     String _strCurrency;
+    String _strIndustry;
 
     bool _isValid               = false;
 
@@ -193,10 +194,11 @@ private:
             debugI("Stock Heder: %s", headerData.c_str());
             if (headerData.equals("{}")) 
             {
+                ticker._isValid           = false;
                 ticker._strCompanyName    = "Bad Symbol";
                 ticker._strExchangeName   = "";
                 ticker._strCurrency       = "";
-                ticker._isValid           = false;
+                ticker._strIndustry       = "";
                 ticker._marketCap         = 0.0;
                 ticker._sharesOutstanding = 0.0;
 
@@ -208,10 +210,12 @@ private:
                 JsonObject companyData =  doc.as<JsonObject>();
                 dataFound = true;
 
+                ticker._isValid           = true;
                 ticker._strSymbol         = companyData["ticker"].as<String>();
                 ticker._strCompanyName    = companyData["name"].as<String>();
                 ticker._strExchangeName   = companyData["exchange"].as<String>();
                 ticker._strCurrency       = companyData["currency"].as<String>();
+                ticker._strIndustry       = companyData["finnhubIndustry"].as<String>();
                 ticker._marketCap         = companyData["marketCapitalization"];
                 ticker._sharesOutstanding = companyData["shareOutstanding"];
 
@@ -277,7 +281,6 @@ private:
                 ticker._openPrice         = 0.0;
                 ticker._prevClosePrice    = 0.0;
                 ticker._sampleTime        = 0.0;
-                ticker._sharesOutstanding = 0.0;
 
                 debugW("Bad ticker symbol: '%s'", ticker._strSymbol.c_str());
             }
