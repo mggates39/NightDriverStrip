@@ -575,10 +575,10 @@ public:
      */
     void Draw() override
     {
-        unsigned long msSinceLastCheck  = millis() - _msLastDrawTime;
+        unsigned long msSinceLastDraw  = millis() - _msLastDrawTime;
         unsigned long msSinceLastToggle = millis() - _msLastToggleTime;
 
-        if (msSinceLastCheck >= STOCK_DISPLAY_INTERVAL)
+        if (msSinceLastDraw >= STOCK_DISPLAY_INTERVAL)
         {
             _msLastDrawTime = millis();
             _msLastToggleTime = _msLastDrawTime;
