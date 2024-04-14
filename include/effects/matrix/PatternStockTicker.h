@@ -135,7 +135,7 @@ private:
     /**
      * @brief How many frames per second does this effect want?
      * 
-     * @return size_t - 10 FPS
+     * @return size_t - 30 FPS
      */
     size_t DesiredFramesPerSecond() const override
     {
