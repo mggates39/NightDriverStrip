@@ -120,14 +120,14 @@ class VUMeter
     //
     // Draw i-th pixel in row y
 
-    void DrawVUPixels(std::shared_ptr<GFXBase> pGFXChannel, int i, int yVU, int fadeBy = 0, const CRGBPalette16 * pPalette = nullptr)
+    virtual void DrawVUPixels(std::vector<std::shared_ptr<GFXBase>> & GFX, int i, int yVU, int fadeBy = 0, const CRGBPalette16 * pPalette = nullptr)
     {
         if (g_Analyzer.MicMode() == PeakData::PCREMOTE)
             pPalette = &vuPaletteBlue;
 
-        int xHalf = pGFXChannel->width()/2;
-        pGFXChannel->setPixel(xHalf-i-1, yVU, ColorFromPalette(pPalette ? *pPalette : vu_gpGreen,  i*(256/xHalf)).fadeToBlackBy(fadeBy));
-        pGFXChannel->setPixel(xHalf+i,   yVU, ColorFromPalette(pPalette ? *pPalette : vu_gpGreen, i*(256/xHalf)).fadeToBlackBy(fadeBy));
+        int xHalf = GFX[0]->width()/2;
+        GFX[0]->setPixel(xHalf-i-1, yVU, ColorFromPalette(pPalette ? *pPalette : vu_gpGreen,  i*(256/xHalf)).fadeToBlackBy(fadeBy));
+        GFX[0]->setPixel(xHalf+i,   yVU, ColorFromPalette(pPalette ? *pPalette : vu_gpGreen, i*(256/xHalf)).fadeToBlackBy(fadeBy));
     }
 
 
@@ -140,25 +140,25 @@ class VUMeter
 
   public:
 
-    inline void EraseVUMeter(std::shared_ptr<GFXBase> pGFXChannel, int start, int yVU) const
+    virtual inline void EraseVUMeter(std::vector<std::shared_ptr<GFXBase>> & GFX, int start, int yVU) const
     {
-        int xHalf = pGFXChannel->width()/2;
+        int xHalf = GFX[0]->width()/2;
         for (int i = start; i <= xHalf; i++)
         {
-            pGFXChannel->setPixel(xHalf-i,   yVU, CRGB::Black);
-            pGFXChannel->setPixel(xHalf-1+i,   yVU, CRGB::Black);
+            GFX[0]->setPixel(xHalf-i, yVU, CRGB::Black);
+            GFX[0]->setPixel(xHalf-1+i, yVU, CRGB::Black);
         }
     }
 
-    void DrawVUMeter(std::shared_ptr<GFXBase> pGFXChannel, int yVU, const CRGBPalette16 * pPalette = nullptr)
+    virtual void DrawVUMeter(std::vector<std::shared_ptr<GFXBase>> & GFX, int yVU = 0, const CRGBPalette16 * pPalette = nullptr)
     {
         const int MAX_FADE = 256;
 
-        int xHalf = pGFXChannel->width()/2-1;
-        int bars  = g_Analyzer._VURatioFade / 2.0 * xHalf; // map(g_Analyzer._VU, 0, MAX_VU/8, 1, xHalf);
+        int xHalf = GFX[0]->width()/2-1;
+        int bars  = g_Analyzer._VURatioFade / 2.0 * xHalf; 
         bars = min(bars, xHalf);
 
-        EraseVUMeter(pGFXChannel, bars, yVU);
+        EraseVUMeter(GFX, bars, yVU);
 
         if (bars >= iPeakVUy)
         {
@@ -173,13 +173,66 @@ class VUMeter
         if (iPeakVUy > 1)
         {
             int fade = MAX_FADE * (millis() - msPeakVU) / (float) MS_PER_SECOND * 2;
-            DrawVUPixels(pGFXChannel, iPeakVUy,   yVU, fade);
-            DrawVUPixels(pGFXChannel, iPeakVUy-1, yVU, fade);
+            DrawVUPixels(GFX, iPeakVUy,   yVU, fade);
+            DrawVUPixels(GFX, iPeakVUy-1, yVU, fade);
         }
 
         for (int i = 0; i < bars; i++)
-            DrawVUPixels(pGFXChannel, i, yVU, i > bars ? 255 : 0, pPalette);
+            DrawVUPixels(GFX, i, yVU, i > bars ? 255 : 0, pPalette);
     }
+};
+
+class VUMeterVertical : public VUMeter
+{
+private:    
+    virtual inline void EraseVUMeter(std::vector<std::shared_ptr<GFXBase>> & GFX, int start, int yVU) const
+    {
+        for (int i = start; i <= GFX[0]->width(); i++)
+            for (auto& device : GFX)
+                device->setPixel(i, yVU, CRGB::Black);
+    }
+
+    // DrawVUPixels
+    //
+    // Draw i-th pixel in row y
+
+    virtual void DrawVUPixels(std::vector<std::shared_ptr<GFXBase>> & GFX, int i, int yVU, int fadeBy = 0, const CRGBPalette16 * pPalette = nullptr) override
+    {
+        for (auto& device : GFX)
+            device->setPixel(i, yVU, ColorFromPalette(pPalette ? *pPalette : vu_gpGreen,  i*256/GFX[0]->width()).fadeToBlackBy(fadeBy));
+    }
+
+public:
+    void DrawVUMeter(std::vector<std::shared_ptr<GFXBase>> & GFX, int yVU = 0, const CRGBPalette16 * pPalette = nullptr)
+    {
+        const int MAX_FADE = 256;
+
+        int size = GFX[0]->width();
+        int bars  = g_Analyzer._VURatioFade / 2.0 * size; 
+        bars = min(bars, size);
+
+        EraseVUMeter(GFX, bars, yVU);
+
+        if (bars >= iPeakVUy)
+        {
+            msPeakVU = millis();
+            iPeakVUy = bars;
+        }
+        else if (millis() - msPeakVU > MS_PER_SECOND / 2)
+        {
+            iPeakVUy = 0;
+        }
+
+        if (iPeakVUy > 1)
+        {
+            int fade = MAX_FADE * (millis() - msPeakVU) / (float) MS_PER_SECOND * 2;
+            DrawVUPixels(GFX, iPeakVUy,   yVU, fade);
+            DrawVUPixels(GFX, iPeakVUy-1, yVU, fade);
+        }
+
+        for (int i = 0; i < bars; i++)
+            DrawVUPixels(GFX, i, yVU, i > bars ? 255 : 0, pPalette);
+    }    
 };
 
 class VUMeterEffect : virtual public VUMeter, public LEDStripEffect
@@ -187,7 +240,7 @@ class VUMeterEffect : virtual public VUMeter, public LEDStripEffect
 public:
     virtual void Draw() override
     {
-        DrawVUMeter(g(), 0);
+        DrawVUMeter(g_ptrSystem->EffectManager().GetBaseGraphics(), 0);
     }
 
     VUMeterEffect() : LEDStripEffect(EFFECT_STRIP_VUMETER, "VUMeter")
@@ -205,6 +258,28 @@ public:
     }
 };
 
+class VUMeterVerticalEffect : virtual public VUMeterVertical, public LEDStripEffect
+{
+public:
+    virtual void Draw() override
+    {
+        DrawVUMeter(g_ptrSystem->EffectManager().GetBaseGraphics(), 0);
+    }
+
+    VUMeterVerticalEffect() : LEDStripEffect(EFFECT_STRIP_VUMETER_VERTICAL, "Vertical VUMeter")
+    {
+    }
+
+    VUMeterVerticalEffect(const JsonObjectConst& jsonObject)
+      : LEDStripEffect(jsonObject)
+    {
+    }
+
+    bool SerializeToJSON(JsonObject& jsonObject) override
+    {
+        return true;
+    }
+};
 // SpectrumAnalyzerEffect
 //
 // An effect that draws an audio spectrum analyzer on a matrix.  It is assumed that the
@@ -216,15 +291,16 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
 
     uint8_t   _numBars;
     uint8_t   _colorOffset;
-    uint16_t  _scrollSpeed;
+    uint16_t  _colorScrollSpeed;
     uint8_t   _fadeRate;
+    bool      _bScrollBars;
 
     const CRGBPalette16 _palette;
     bool                _ignoreGlobalColor;
     float               _peak1DecayRate;
     float               _peak2DecayRate;
-
     bool                _bShowVU;
+    int                 _offset = 0;
 
     virtual size_t DesiredFramesPerSecond() const override
     {
@@ -241,7 +317,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
     // Draws the bar graph rectangle for a bar and then the white line on top of it.  Interpolates odd bars when you
     // have twice as many bars as bands.
 
-    void DrawBar(const uint8_t iBar, CRGB baseColor)
+    void DrawBar(const uint8_t iBar, CRGB baseColor, int offset = 0)
     {
         auto pGFXChannel = g();
         int value, value2;
@@ -293,9 +369,11 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         int yOffset   = pGFXChannel->height() - value ;
         int yOffset2  = pGFXChannel->height() - value2 ;
 
+        offset %= MATRIX_WIDTH;
+
         for (int y = yOffset2; y < pGFXChannel->height(); y++)
             for (int x = xOffset; x < xOffset + barWidth; x++)
-                g()->setPixel(x, y, baseColor);
+                g()->setPixel((x - offset + MATRIX_WIDTH) % MATRIX_WIDTH, y, baseColor);
 
         // We draw the highlight in white, but if its falling at a different rate than the bar itself,
         // it indicates a free-floating highlight, and those get faded out based on age
@@ -307,6 +385,8 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         // If a decay rate has been defined and it's different than the rate at which the bar falls
         if (_peak1DecayRate >= 0.0f)
         {
+            xOffset = (xOffset - offset + MATRIX_WIDTH) % MATRIX_WIDTH;
+                
             if (_peak1DecayRate != _peak2DecayRate)
             {
                 const int PeakFadeTime_ms = 1000;
@@ -336,16 +416,18 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
                            uint16_t           scrollSpeed = 0,
                            uint8_t               fadeRate = 0,
                            float           peak1DecayRate = 1.0,
-                           float           peak2DecayRate = 1.0)
+                           float           peak2DecayRate = 1.0,
+                           bool              bScrollBars  = false)
         : LEDStripEffect(EFFECT_MATRIX_SPECTRUM_ANALYZER, pszFriendlyName),
           _numBars(cNumBars),
           _colorOffset(0),
-          _scrollSpeed(scrollSpeed),
+          _colorScrollSpeed(scrollSpeed),
           _fadeRate(fadeRate),
           _palette(palette),
           _ignoreGlobalColor(ignoreGlobalColor),
           _peak1DecayRate(peak1DecayRate),
-          _peak2DecayRate(peak2DecayRate)
+          _peak2DecayRate(peak2DecayRate),
+          _bScrollBars(bScrollBars)
     {
     }
 
@@ -354,16 +436,18 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
                            const CRGB &          baseColor = CRGB::Red,
                            uint8_t                fadeRate = 0,
                            float            peak1DecayRate = 1.0,
-                           float            peak2DecayRate = 1.0)
+                           float            peak2DecayRate = 1.0,
+                           bool                bScrollBars = false)
         : LEDStripEffect(EFFECT_MATRIX_SPECTRUM_ANALYZER, pszFriendlyName),
           _numBars(cNumBars),
           _colorOffset(0),
-          _scrollSpeed(0),
+          _colorScrollSpeed(0),
           _fadeRate(fadeRate),
           _palette(baseColor),
           _ignoreGlobalColor(true),
           _peak1DecayRate(peak1DecayRate),
-          _peak2DecayRate(peak2DecayRate)
+          _peak2DecayRate(peak2DecayRate),
+          _bScrollBars(bScrollBars)
 
     {
     }
@@ -372,13 +456,13 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         : LEDStripEffect(jsonObject),
           _numBars(jsonObject["nmb"]),
           _colorOffset(0),
-          _scrollSpeed(jsonObject[PTY_SPEED]),
+          _colorScrollSpeed(jsonObject[PTY_SPEED]),
           _fadeRate(jsonObject["frt"]),
           _palette(jsonObject[PTY_PALETTE].as<CRGBPalette16>()),
           _ignoreGlobalColor(jsonObject[PTY_IGNOREGLOBALCOLOR]),
           _peak1DecayRate(jsonObject["pd1"]),
-          _peak2DecayRate(jsonObject["pd2"])
-
+          _peak2DecayRate(jsonObject["pd2"]),
+          _bScrollBars(jsonObject["scb"])
     {
     }
 
@@ -392,10 +476,11 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         jsonDoc[PTY_PALETTE]           = _palette;
         jsonDoc[PTY_IGNOREGLOBALCOLOR] = _ignoreGlobalColor;
         jsonDoc["nmb"]                 = _numBars;
-        jsonDoc[PTY_SPEED]             = _scrollSpeed;
+        jsonDoc[PTY_SPEED]             = _colorScrollSpeed;
         jsonDoc["frt"]                 = _fadeRate;
         jsonDoc["pd1"]                 = _peak1DecayRate;
         jsonDoc["pd2"]                 = _peak2DecayRate;
+        jsonDoc["scb"]                 = _bScrollBars;
 
         assert(!jsonDoc.overflowed());
 
@@ -413,11 +498,14 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
     virtual void Draw() override
     {
 
+        if (_bScrollBars)
+            _offset++;
+
         auto pGFXChannel = _GFX[0];
 
-        if (_scrollSpeed > 0)
+        if (_colorScrollSpeed > 0)
         {
-            EVERY_N_MILLISECONDS(_scrollSpeed)
+            EVERY_N_MILLISECONDS(_colorScrollSpeed)
             {
                 _colorOffset+=2;
             }
@@ -441,7 +529,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
             {
                 // We don't use the color offset when the palette is paused
                 int q = ::map(i, 0, _numBars, 0, 240);
-                DrawBar(i, pGFXChannel->ColorFromCurrentPalette(q % 240, 255, _scrollSpeed > 0 ? LINEARBLEND : NOBLEND));
+                DrawBar(i, pGFXChannel->ColorFromCurrentPalette(q % 240, 255, _colorScrollSpeed > 0 ? LINEARBLEND : NOBLEND), _offset);
             }
             else
             {
@@ -453,7 +541,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
                     globalPalette = CRGBPalette16(deviceConfig.GlobalColor(), deviceConfig.SecondColor());
 
                 int q = ::map(i, 0, _numBars, 0, 255) + _colorOffset;
-                DrawBar(i, ColorFromPalette(globalPalette ? *globalPalette : _palette, (q) % 255, 255, _scrollSpeed > 0 ? LINEARBLEND : NOBLEND));
+                DrawBar(i, ColorFromPalette(globalPalette ? *globalPalette : _palette, (q) % 255, 255, _colorScrollSpeed > 0 ? LINEARBLEND : NOBLEND), _offset);
             }
         }
     }
@@ -763,6 +851,66 @@ class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
 
         g()->DimAll(200);
         DrawGraph();
+    }
+};
+
+// AudioSpikeEffect [MATRIX EFFECT]
+//
+// Simply displays the raw audio sample buffer as a waveform
+
+class AudioSpikeEffect : public LEDStripEffect
+{
+  protected:
+
+  public:
+
+    AudioSpikeEffect(const String & pszFriendlyName)
+        : LEDStripEffect(EFFECT_MATRIX_AUDIOSPIKE, pszFriendlyName)
+    {
+    }
+
+    AudioSpikeEffect(const JsonObjectConst& jsonObject)
+        : LEDStripEffect(jsonObject)
+    {
+    }
+
+    virtual bool SerializeToJSON(JsonObject& jsonObject) override
+    {
+        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+
+        JsonObject root = jsonDoc.to<JsonObject>();
+        LEDStripEffect::SerializeToJSON(root);
+
+        assert(!jsonDoc.overflowed());
+        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+    }
+
+    virtual size_t DesiredFramesPerSecond() const override
+    {
+        return 60;
+    }
+
+    virtual void Draw() override
+    {
+        fadeAllChannelsToBlackBy(50);
+        
+        static int colorOffset = 0;
+        colorOffset+= 4;
+
+        static int offset = 2; 
+
+        const int16_t * data = g_Analyzer.GetSampleBuffer();
+        int lastY = map(data[offset], 0, 2500, 0, MATRIX_HEIGHT);
+        for (int32_t x = 0; x < MATRIX_WIDTH; ++x)
+        {
+            byte y1 = map(data[offset+x], 0, 2500, 0, MATRIX_HEIGHT);
+            CRGB color = ColorFromPalette(spectrumBasicColors, (y1 * 4) + colorOffset, 255, NOBLEND);
+            g()->drawLine(x, lastY, x+1, y1, color);
+            lastY = y1;
+        }    
+        offset += MATRIX_WIDTH;
+        if (offset + MATRIX_WIDTH > g_Analyzer.GetSampleBufferSize())
+            offset = 2;
     }
 };
 

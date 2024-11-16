@@ -31,6 +31,8 @@
 
 #pragma once
 
+#include <deque>
+
 #if USE_HUB75
 #include "TJpg_Decoder.h"
 #endif
@@ -161,13 +163,15 @@ protected:
 
     float _speedDivisor;
     int   _deltaHue;
+    bool  _mirrored;
 
   public:
 
-    RainbowFillEffect(float speedDivisor = 12.0f, int deltaHue = 14)
+    RainbowFillEffect(float speedDivisor = 12.0f, int deltaHue = 14, bool mirrored = false)
       : LEDStripEffect(EFFECT_STRIP_RAINBOW_FILL, "RainbowFill Rainbow"),
         _speedDivisor(speedDivisor),
-        _deltaHue(deltaHue)
+        _deltaHue(deltaHue),
+        _mirrored(mirrored)
     {
         debugV("RainbowFill constructor");
     }
@@ -175,7 +179,8 @@ protected:
     RainbowFillEffect(const JsonObjectConst& jsonObject)
       : LEDStripEffect(jsonObject),
         _speedDivisor(jsonObject[PTY_SPEEDDIVISOR]),
-        _deltaHue(jsonObject[PTY_DELTAHUE])
+        _deltaHue(jsonObject[PTY_DELTAHUE]),
+        _mirrored(jsonObject[PTY_MIRRORED])
     {
         debugV("RainbowFill JSON constructor");
     }
@@ -189,6 +194,7 @@ protected:
 
         jsonDoc[PTY_SPEEDDIVISOR] = _speedDivisor;
         jsonDoc[PTY_DELTAHUE] = _deltaHue;
+        jsonDoc[PTY_MIRRORED] = _mirrored;
 
         assert(!jsonDoc.overflowed());
 
@@ -205,7 +211,7 @@ protected:
 
         hue += (float) msElapsed / _speedDivisor;
         hue = fmod(hue, 256.0);
-        fillRainbowAllChannels(0, _cLEDs, hue, _deltaHue);
+        fillRainbowAllChannels(0, _cLEDs, hue, _deltaHue, 1, _mirrored);
         delay(10);
     }
 };
@@ -228,6 +234,15 @@ protected:
     bool _ignoreGlobalColor;
 
   public:
+
+    ColorFillEffect(const String &name, CRGB color = CRGB(246,200,160), int everyNth = 10, bool ignoreGlobalColor = false)
+      : LEDStripEffect(EFFECT_STRIP_COLOR_FILL, name),
+        _everyNth(everyNth),
+        _color(color),
+        _ignoreGlobalColor(ignoreGlobalColor)
+    {
+        debugV("Color Fill constructor");
+    }
 
     ColorFillEffect(CRGB color = CRGB(246,200,160), int everyNth = 10, bool ignoreGlobalColor = false)
       : LEDStripEffect(EFFECT_STRIP_COLOR_FILL, "Color Fill"),
@@ -393,15 +408,15 @@ class StatusEffect : public LEDStripEffect
 };
 
 #if CLASSIC_GE_C9
-static const CRGB TwinkleColors[] =
+static constexpr auto TwinkleColors =  to_array(
 {
     CRGB(238, 51, 39),      // Red
     CRGB(0, 172, 87),       // Green
     CRGB(250, 164, 25),     // Yellow
     CRGB(0, 131, 203)       // Blue
-};
+});
 #else
-static const CRGB TwinkleColors[] =
+static constexpr auto TwinkleColors =  to_array(
 {
     CRGB::Red,
     CRGB::Green,
@@ -409,7 +424,7 @@ static const CRGB TwinkleColors[] =
     CRGB::Blue,
     CRGB::Purple,
     CRGB::Yellow
-};
+});
 #endif
 
 class TwinkleEffect : public LEDStripEffect
@@ -491,7 +506,7 @@ class TwinkleEffect : public LEDStripEffect
                   return;
               }
               assert(litPixels.end() == find(litPixels.begin(), litPixels.end(), iNew));
-              setPixelOnAllChannels(iNew, TwinkleColors[random(0, ARRAYSIZE(TwinkleColors))]);
+              setPixelOnAllChannels(iNew, TwinkleColors[random(0, std::size(TwinkleColors))]);
               litPixels.push_front(iNew);
             }
         }
@@ -499,6 +514,97 @@ class TwinkleEffect : public LEDStripEffect
         EVERY_N_MILLISECONDS(20)
         {
             fadeAllChannelsToBlackBy(_fadeFactor);
+        }
+    }
+};
+
+// SilonEffect
+//
+// A Battlestar Galactica inspired effect that moves red and green bars back and forth
+
+class SilonEffect : public LEDStripEffect
+{
+  public:
+
+    SilonEffect() : LEDStripEffect(EFFECT_MATRIX_SILON, "SilonEffect")
+    {
+    }
+
+    SilonEffect(const JsonObjectConst& jsonObject)
+      : LEDStripEffect(jsonObject)
+    {
+    }
+
+    int _offset = 0;
+    int _direction = 1;
+
+    virtual size_t DesiredFramesPerSecond() const
+    {
+        return 20;
+    }
+
+    virtual void Draw() override
+    {
+        _offset += _direction;
+        if (_offset >= MATRIX_WIDTH)
+        {
+            _offset = MATRIX_WIDTH - 1;
+            _direction = -1;
+        }
+        if (_offset <= 0)
+        {
+            _offset = 0;
+            _direction = 1;
+        }
+        fadeAllChannelsToBlackBy(75);
+
+        for (int y = 0; y < MATRIX_HEIGHT; y++)
+        {
+            setPixelOnAllChannels(_offset, y, CRGB::Red);
+            setPixelOnAllChannels(MATRIX_WIDTH - 1 - _offset, y, CRGB::Green);
+        }
+    }
+};
+
+// PDPGridEffect
+//
+// A Display for the front of the PDP-11/34
+
+class PDPGridEffect : public LEDStripEffect
+{
+  public:
+
+    PDPGridEffect() : LEDStripEffect(EFFECT_MATRIX_PDPGRID, "PDPGridEffect")
+    {
+    }
+
+    PDPGridEffect(const JsonObjectConst& jsonObject)
+      : LEDStripEffect(jsonObject)
+    {
+    }
+
+    int _offset = 0;
+    int _direction = 1;
+
+    virtual size_t DesiredFramesPerSecond() const
+    {
+        return 20;
+    }
+
+    virtual void Draw() override
+    {
+        fadeAllChannelsToBlackBy(255 * g_Values.AppTime.LastFrameTime());
+
+        EVERY_N_MILLISECONDS(200)
+        {
+          g()->MoveY(1);
+          for (int x = 0; x < MATRIX_WIDTH; x++)
+          {
+              if (random(0, 100) < 20)
+                  setPixelOnAllChannels(x, MATRIX_HEIGHT-1, CRGB::Red);
+              else
+                  setPixelOnAllChannels(x, MATRIX_HEIGHT-1, CRGB::Black);
+          }
         }
     }
 };

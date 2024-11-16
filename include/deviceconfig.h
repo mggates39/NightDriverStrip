@@ -30,13 +30,12 @@
 
 #pragma once
 
-#include <memory>
 #include <vector>
 #include <tuple>
-#include <algorithm>
 #include "jsonserializer.h"
 #include "types.h"
 
+#if ENABLE_WIFI
 // Make sure we have a secrets.h and that it contains everything we need.
 
 #if !__has_include("secrets.h")
@@ -76,6 +75,15 @@
 #if !defined(cszTimeZone)
 #error A definition for cszTimeZone is missing from secrets.h
 #endif
+#else
+#define cszHostname ""
+#define cszLocation ""
+#define bLocationIsZip false
+#define cszCountryCode ""
+#define cszTimeZone ""
+#define cszOpenWeatherAPIKey ""
+#define cszSSID ""
+#endif // ENABLE_WIFI
 
 // Define this to true to make the DeviceConfig ignore any JSON-persisted config that may be on the device.
 // Note that effect settings are not impacted by this setting. Their persisted config is part of the effects
@@ -84,9 +92,11 @@
 
 #define DEVICE_CONFIG_FILE          "/device.cfg"
 #define NTP_SERVER_DEFAULT          "0.pool.ntp.org"
-#define BRIGHTNESS_MIN              uint8_t(10)
+#ifndef BRIGHTNESS_MIN
+    #define BRIGHTNESS_MIN          uint8_t(10)
+#endif
 #define BRIGHTNESS_MAX              uint8_t(255)
-#define POWER_LIMIT_MIN             2000
+#define POWER_LIMIT_MIN             1000
 #define POWER_LIMIT_DEFAULT         4500
 
 // DeviceConfig holds, persists and loads device-wide configuration settings. Effect-specific settings should
@@ -134,7 +144,7 @@ class DeviceConfig : public IJSONSerializable
 
     static constexpr int _jsonSize = 1024;
 
-    void SaveToJSON();
+    void SaveToJSON() const;
 
     template <typename T>
     void SetAndSave(T& target, const T& source)
@@ -262,14 +272,14 @@ class DeviceConfig : public IJSONSerializable
         return true;
     }
 
-    void RemovePersisted()
+    static void RemovePersisted()
     {
         RemoveJSONFile(DEVICE_CONFIG_FILE);
     }
 
     virtual const std::vector<std::reference_wrapper<SettingSpec>>& GetSettingSpecs()
     {
-        if (settingSpecs.size() == 0)
+        if (settingSpecs.empty())
         {
             // Add SettingSpec for additional settings to this list
             settingSpecs.emplace_back(
@@ -464,7 +474,7 @@ class DeviceConfig : public IJSONSerializable
         return openWeatherApiKey;
     }
 
-    ValidateResponse ValidateOpenWeatherAPIKey(const String &newOpenWeatherAPIKey);
+    static ValidateResponse ValidateOpenWeatherAPIKey(const String &newOpenWeatherAPIKey);
 
     void SetOpenWeatherAPIKey(const String &newOpenWeatherAPIKey)
     {
@@ -506,7 +516,7 @@ class DeviceConfig : public IJSONSerializable
         return brightness;
     }
 
-    ValidateResponse ValidateBrightness(const String& newBrightness)
+    static ValidateResponse ValidateBrightness(const String& newBrightness)
     {
         auto newNumericBrightness = newBrightness.toInt();
 
@@ -544,7 +554,7 @@ class DeviceConfig : public IJSONSerializable
         return powerLimit;
     }
 
-    ValidateResponse ValidatePowerLimit(const String& newPowerLimit)
+    static ValidateResponse ValidatePowerLimit(const String& newPowerLimit)
     {
         if (newPowerLimit.toInt() < POWER_LIMIT_MIN)
             return { false, String("powerLimit is below minimum value of ") + POWER_LIMIT_MIN };
