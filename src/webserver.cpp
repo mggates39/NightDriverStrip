@@ -53,9 +53,9 @@ std::vector<std::reference_wrapper<SettingSpec>> CWebServer::deviceSettingSpecs{
 
 // Push param that represents a bool. Values considered true are text "true" and any whole number not equal to 0
 template<>
-bool CWebServer::PushPostParamIfPresent<bool>(AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<bool> setter)
+bool CWebServer::PushPostParamIfPresent<bool>(const AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<bool> setter)
 {
-    return PushPostParamIfPresent<bool>(pRequest, paramName, std::move(setter), [](AsyncWebParameter * param) constexpr
+    return PushPostParamIfPresent<bool>(pRequest, paramName, std::move(setter), [](const AsyncWebParameter * param) constexpr
     {
         return BoolFromText(param->value());
     });
@@ -63,9 +63,9 @@ bool CWebServer::PushPostParamIfPresent<bool>(AsyncWebServerRequest * pRequest, 
 
 // Push param that represents a size_t
 template<>
-bool CWebServer::PushPostParamIfPresent<size_t>(AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<size_t> setter)
+bool CWebServer::PushPostParamIfPresent<size_t>(const AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<size_t> setter)
 {
-    return PushPostParamIfPresent<size_t>(pRequest, paramName, std::move(setter), [](AsyncWebParameter * param) constexpr
+    return PushPostParamIfPresent<size_t>(pRequest, paramName, std::move(setter), [](const AsyncWebParameter * param) constexpr
     {
         return strtoul(param->value().c_str(), nullptr, 10);
     });
@@ -73,9 +73,9 @@ bool CWebServer::PushPostParamIfPresent<size_t>(AsyncWebServerRequest * pRequest
 
 // Push param that represents an int
 template<>
-bool CWebServer::PushPostParamIfPresent<int>(AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<int> setter)
+bool CWebServer::PushPostParamIfPresent<int>(const AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<int> setter)
 {
-    return PushPostParamIfPresent<int>(pRequest, paramName, std::move(setter), [](AsyncWebParameter * param) constexpr
+    return PushPostParamIfPresent<int>(pRequest, paramName, std::move(setter), [](const AsyncWebParameter * param) constexpr
     {
         return std::stoi(param->value().c_str());
     });
@@ -83,9 +83,9 @@ bool CWebServer::PushPostParamIfPresent<int>(AsyncWebServerRequest * pRequest, c
 
 // Push param that represents a color
 template<>
-bool CWebServer::PushPostParamIfPresent<CRGB>(AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<CRGB> setter)
+bool CWebServer::PushPostParamIfPresent<CRGB>(const AsyncWebServerRequest * pRequest, const String &paramName, ValueSetter<CRGB> setter)
 {
-    return PushPostParamIfPresent<CRGB>(pRequest, paramName, std::move(setter), [](AsyncWebParameter * param) constexpr
+    return PushPostParamIfPresent<CRGB>(pRequest, paramName, std::move(setter), [](const AsyncWebParameter * param) constexpr
     {
         return CRGB(strtoul(param->value().c_str(), nullptr, 10));
     });
@@ -144,8 +144,14 @@ void CWebServer::begin()
 
     // Instance handler requests
 
-    _server.on("/statistics",            HTTP_GET,  [this](AsyncWebServerRequest* pRequest) { this->GetStatistics(pRequest); });
-    _server.on("/getStatistics",         HTTP_GET,  [this](AsyncWebServerRequest* pRequest) { this->GetStatistics(pRequest); });
+    _server.on("/statistics/static",     HTTP_GET,  [this](AsyncWebServerRequest* pRequest)
+                                                    { this->GetStatistics(pRequest, StatisticsType::Static); });
+    _server.on("/statistics/dynamic",    HTTP_GET,  [this](AsyncWebServerRequest* pRequest)
+                                                    { this->GetStatistics(pRequest, StatisticsType::Dynamic); });
+    _server.on("/statistics",            HTTP_GET,  [this](AsyncWebServerRequest* pRequest)
+                                                    { this->GetStatistics(pRequest); });
+    _server.on("/getStatistics",         HTTP_GET,  [this](AsyncWebServerRequest* pRequest)
+                                                    { this->GetStatistics(pRequest); });
 
     // Static handler requests
 
@@ -219,84 +225,92 @@ long CWebServer::GetEffectIndexFromParam(AsyncWebServerRequest * pRequest, bool 
     return strtol(pRequest->getParam("effectIndex", post, false)->value().c_str(), nullptr, 10);
 }
 
-void CWebServer::GetEffectListText(AsyncWebServerRequest * pRequest)
+void CWebServer::SendBufferOverflowResponse(AsyncWebServerRequest * pRequest)
 {
-    static size_t jsonBufferSize = JSON_BUFFER_BASE_SIZE;
-    bool bufferOverflow;
-    debugV("GetEffectListText");
-
-    do
-    {
-        bufferOverflow = false;
-        auto response = std::make_unique<AsyncJsonResponse>(false, jsonBufferSize);
-        auto& j = response->getRoot();
-        auto& effectManager = g_ptrSystem->EffectManager();
-
-        j["currentEffect"]         = effectManager.GetCurrentEffectIndex();
-        j["millisecondsRemaining"] = effectManager.GetTimeRemainingForCurrentEffect();
-        j["eternalInterval"]       = effectManager.IsIntervalEternal();
-        j["effectInterval"]        = effectManager.GetInterval();
-
-        for (const auto& effect : effectManager.EffectsList())
-        {
-            StaticJsonDocument<256> effectDoc;
-
-            effectDoc["name"]    = effect->FriendlyName();
-            effectDoc["enabled"] = effect->IsEnabled();
-            effectDoc["core"]    = effect->IsCoreEffect();
-
-            if (!j["Effects"].add(effectDoc))
-            {
-                bufferOverflow = true;
-                jsonBufferSize += JSON_BUFFER_INCREMENT;
-                debugV("JSON response buffer overflow! Increased buffer to %zu bytes", jsonBufferSize);
-                break;
-            }
-        }
-
-        if (!bufferOverflow)
-            AddCORSHeaderAndSendResponse(pRequest, response.release());
-
-    } while (bufferOverflow);
+    AddCORSHeaderAndSendResponse(
+        pRequest,
+        pRequest->beginResponse(
+            HTTP_CODE_INTERNAL_SERVER_ERROR,
+            "text/json",
+            "{\"message\": \"JSON response buffer overflow\"}"
+        )
+    );
 }
 
-void CWebServer::GetStatistics(AsyncWebServerRequest * pRequest) const
+void CWebServer::GetEffectListText(AsyncWebServerRequest * pRequest)
+{
+    debugV("GetEffectListText");
+
+    auto response = new AsyncJsonResponse();
+    auto& j = response->getRoot();
+    auto& effectManager = g_ptrSystem->EffectManager();
+
+    j["currentEffect"]         = effectManager.GetCurrentEffectIndex();
+    j["millisecondsRemaining"] = effectManager.GetTimeRemainingForCurrentEffect();
+    j["eternalInterval"]       = effectManager.IsIntervalEternal();
+    j["effectInterval"]        = effectManager.GetInterval();
+
+    for (const auto& effect : effectManager.EffectsList())
+    {
+        auto effectDoc = CreateJsonDocument();
+
+        effectDoc["name"]    = effect->FriendlyName();
+        effectDoc["enabled"] = effect->IsEnabled();
+        effectDoc["core"]    = effect->IsCoreEffect();
+
+        if (!j["Effects"].add(effectDoc))
+        {
+            debugV("JSON response buffer overflow!");
+            SendBufferOverflowResponse(pRequest);
+            return;
+        }
+    }
+
+    AddCORSHeaderAndSendResponse(pRequest, response);
+}
+
+void CWebServer::GetStatistics(AsyncWebServerRequest * pRequest, StatisticsType statsType) const
 {
     debugV("GetStatistics");
 
-    auto response = new AsyncJsonResponse(false, JSON_BUFFER_BASE_SIZE);
+    auto response = new AsyncJsonResponse();
     auto& j = response->getRoot();
 
-    j["LED_FPS"]               = g_Values.FPS;
-    j["SERIAL_FPS"]            = g_Analyzer._serialFPS;
-    j["AUDIO_FPS"]             = g_Analyzer._AudioFPS;
+    if ((statsType & StatisticsType::Static) != StatisticsType::None)
+    {
+        j["MATRIX_WIDTH"]          = MATRIX_WIDTH;
+        j["MATRIX_HEIGHT"]         = MATRIX_HEIGHT;
+        j["FRAMES_SOCKET"]         = !!COLORDATA_WEB_SOCKET_ENABLED;
+        j["EFFECTS_SOCKET"]        = !!EFFECTS_WEB_SOCKET_ENABLED;
+        j["CHIP_MODEL"]            = _staticStats.ChipModel;
+        j["CHIP_CORES"]            = _staticStats.ChipCores;
+        j["CHIP_SPEED"]            = _staticStats.CpuFreqMHz;
+        j["PROG_SIZE"]             = _staticStats.SketchSize;
+        j["CODE_SIZE"]             = _staticStats.SketchSize;
+        j["FLASH_SIZE"]            = _staticStats.FlashChipSize;
+        j["HEAP_SIZE"]             = _staticStats.HeapSize;
+        j["DMA_SIZE"]              = _staticStats.DmaHeapSize;
+        j["PSRAM_SIZE"]            = _staticStats.PsramSize;
+        j["CODE_FREE"]             = _staticStats.FreeSketchSpace;
+    }
 
-    j["HEAP_SIZE"]             = _staticStats.HeapSize;
-    j["HEAP_FREE"]             = ESP.getFreeHeap();
-    j["HEAP_MIN"]              = ESP.getMinFreeHeap();
+    if ((statsType & StatisticsType::Dynamic) != StatisticsType::None)
+    {
+        j["LED_FPS"]               = g_Values.FPS;
+        j["SERIAL_FPS"]            = g_Analyzer._serialFPS;
+        j["AUDIO_FPS"]             = g_Analyzer._AudioFPS;
+        j["HEAP_FREE"]             = ESP.getFreeHeap();
+        j["HEAP_MIN"]              = ESP.getMinFreeHeap();
+        j["DMA_FREE"]              = heap_caps_get_free_size(MALLOC_CAP_DMA);
+        j["DMA_MIN"]               = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+        j["PSRAM_FREE"]            = ESP.getFreePsram();
+        j["PSRAM_MIN"]             = ESP.getMinFreePsram();
+        auto& taskManager = g_ptrSystem->TaskManager();
 
-    j["DMA_SIZE"]              = _staticStats.DmaHeapSize;
-    j["DMA_FREE"]              = heap_caps_get_free_size(MALLOC_CAP_DMA);
-    j["DMA_MIN"]               = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
-
-    j["PSRAM_SIZE"]            = _staticStats.PsramSize;
-    j["PSRAM_FREE"]            = ESP.getFreePsram();
-    j["PSRAM_MIN"]             = ESP.getMinFreePsram();
-
-    j["CHIP_MODEL"]            = _staticStats.ChipModel;
-    j["CHIP_CORES"]            = _staticStats.ChipCores;
-    j["CHIP_SPEED"]            = _staticStats.CpuFreqMHz;
-    j["PROG_SIZE"]             = _staticStats.SketchSize;
-
-    j["CODE_SIZE"]             = _staticStats.SketchSize;
-    j["CODE_FREE"]             = _staticStats.FreeSketchSpace;
-    j["FLASH_SIZE"]            = _staticStats.FlashChipSize;
-
-    auto& taskManager = g_ptrSystem->TaskManager();
-
-    j["CPU_USED"]              = taskManager.GetCPUUsagePercent();
-    j["CPU_USED_CORE0"]        = taskManager.GetCPUUsagePercent(0);
-    j["CPU_USED_CORE1"]        = taskManager.GetCPUUsagePercent(1);
+        j["CPU_USED"]              = taskManager.GetCPUUsagePercent();
+        j["CPU_USED_CORE0"]        = taskManager.GetCPUUsagePercent(0);
+        j["CPU_USED_CORE1"]        = taskManager.GetCPUUsagePercent(1);
+    }
 
     AddCORSHeaderAndSendResponse(pRequest, response);
 }
@@ -400,67 +414,54 @@ void CWebServer::PreviousEffect(AsyncWebServerRequest * pRequest)
 
 void CWebServer::SendSettingSpecsResponse(AsyncWebServerRequest * pRequest, const std::vector<std::reference_wrapper<SettingSpec>> & settingSpecs)
 {
-    static size_t jsonBufferSize = JSON_BUFFER_BASE_SIZE;
-    bool bufferOverflow;
+    auto response = new AsyncJsonResponse();
+    auto jsonArray = response->getRoot().to<JsonArray>();
 
-    do
+    for (const auto& specWrapper : settingSpecs)
     {
-        bufferOverflow = false;
-        auto response = std::make_unique<AsyncJsonResponse>(false, jsonBufferSize);
-        auto jsonArray = response->getRoot().to<JsonArray>();
+        const auto& spec = specWrapper.get();
+        auto specObject = jsonArray.add<JsonObject>();
 
-        for (auto& specWrapper : settingSpecs)
+        auto jsonDoc = CreateJsonDocument();
+
+        jsonDoc["name"] = spec.Name;
+        jsonDoc["friendlyName"] = spec.FriendlyName;
+        if (spec.Description)
+            jsonDoc["description"] = spec.Description;
+        jsonDoc["type"] = to_value(spec.Type);
+        jsonDoc["typeName"] = spec.TypeName();
+        if (spec.HasValidation)
+            jsonDoc["hasValidation"] = true;
+        if (spec.MinimumValue.has_value())
+            jsonDoc["minimumValue"] = spec.MinimumValue.value();
+        if (spec.MaximumValue.has_value())
+            jsonDoc["maximumValue"] = spec.MaximumValue.value();
+        if (spec.EmptyAllowed.has_value())
+            jsonDoc["emptyAllowed"] = spec.EmptyAllowed.value();
+        switch (spec.Access)
         {
-            auto& spec = specWrapper.get();
-            auto specObject = jsonArray.createNestedObject();
-
-            StaticJsonDocument<384> jsonDoc;
-
-            jsonDoc["name"] = spec.Name;
-            jsonDoc["friendlyName"] = spec.FriendlyName;
-            if (spec.Description)
-                jsonDoc["description"] = spec.Description;
-            jsonDoc["type"] = to_value(spec.Type);
-            jsonDoc["typeName"] = spec.TypeName();
-            if (spec.HasValidation)
-                jsonDoc["hasValidation"] = true;
-            if (spec.MinimumValue.has_value())
-                jsonDoc["minimumValue"] = spec.MinimumValue.value();
-            if (spec.MaximumValue.has_value())
-                jsonDoc["maximumValue"] = spec.MaximumValue.value();
-            if (spec.EmptyAllowed.has_value())
-                jsonDoc["emptyAllowed"] = spec.EmptyAllowed.value();
-            switch (spec.Access)
-            {
-                case SettingSpec::SettingAccess::ReadOnly:
-                    jsonDoc["readOnly"] = true;
-                    break;
-
-                case SettingSpec::SettingAccess::WriteOnly:
-                    jsonDoc["writeOnly"] = true;
-                    break;
-
-                default:
-                    // Default is read/write, so we don't need to specify that
-                    break;
-            }
-
-            if (jsonDoc.overflowed())
-                debugE("JSON buffer overflow while serializing SettingSpec - object incomplete!");
-
-            if (!specObject.set(jsonDoc.as<JsonObjectConst>()))
-            {
-                bufferOverflow = true;
-                jsonBufferSize += JSON_BUFFER_INCREMENT;
-                debugV("JSON response buffer overflow! Increased buffer to %zu bytes", jsonBufferSize);
+            case SettingSpec::SettingAccess::ReadOnly:
+                jsonDoc["readOnly"] = true;
                 break;
-            }
+
+            case SettingSpec::SettingAccess::WriteOnly:
+                jsonDoc["writeOnly"] = true;
+                break;
+
+            default:
+                // Default is read/write, so we don't need to specify that
+                break;
         }
 
-        if (!bufferOverflow)
-            AddCORSHeaderAndSendResponse(pRequest, response.release());
+        if (jsonDoc.overflowed() || !specObject.set(jsonDoc.as<JsonObjectConst>()))
+        {
+            debugV("JSON response buffer overflow!");
+            SendBufferOverflowResponse(pRequest);
+            return;
+        }
+    }
 
-    } while (bufferOverflow);
+    AddCORSHeaderAndSendResponse(pRequest, response);
 }
 
 const std::vector<std::reference_wrapper<SettingSpec>> & CWebServer::LoadDeviceSettingSpecs()
@@ -492,7 +493,7 @@ void CWebServer::GetSettings(AsyncWebServerRequest * pRequest)
 {
     debugV("GetSettings");
 
-    auto response = new AsyncJsonResponse(false, JSON_BUFFER_BASE_SIZE);
+    auto response = new AsyncJsonResponse();
     response->addHeader("Server", "NightDriverStrip");
     auto root = response->getRoot();
     JsonObject jsonObject = root.to<JsonObject>();
@@ -582,22 +583,17 @@ void CWebServer::GetEffectSettingSpecs(AsyncWebServerRequest * pRequest)
 
 void CWebServer::SendEffectSettingsResponse(AsyncWebServerRequest * pRequest, std::shared_ptr<LEDStripEffect> & effect)
 {
-    static size_t jsonBufferSize = JSON_BUFFER_BASE_SIZE;
+    auto response = std::make_unique<AsyncJsonResponse>();
+    auto jsonObject = response->getRoot().to<JsonObject>();
 
-    do
+    if (effect->SerializeSettingsToJSON(jsonObject))
     {
-        auto response = std::make_unique<AsyncJsonResponse>(false, jsonBufferSize);
-        auto jsonObject = response->getRoot().to<JsonObject>();
+        AddCORSHeaderAndSendResponse(pRequest, response.release());
+        return;
+    }
 
-        if (effect->SerializeSettingsToJSON(jsonObject))
-        {
-            AddCORSHeaderAndSendResponse(pRequest, response.release());
-            return;
-        }
-
-        jsonBufferSize += JSON_BUFFER_INCREMENT;
-        debugV("JSON response buffer overflow! Increased buffer to %zu bytes", jsonBufferSize);
-    } while (true);
+    debugV("JSON response buffer overflow!");
+    SendBufferOverflowResponse(pRequest);
 }
 
 void CWebServer::GetEffectSettings(AsyncWebServerRequest * pRequest)

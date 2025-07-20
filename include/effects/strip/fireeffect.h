@@ -65,8 +65,6 @@ class FireEffect : public LEDStripEffect
 
     static const uint8_t BlendTotal = (BlendSelf + BlendNeighbor1 + BlendNeighbor2 + BlendNeighbor3);
 
-    static constexpr int _jsonSize = LEDStripEffect::_jsonSize + 128;
-
     int CellCount() const { return LEDCount * CellsPerLED; }
 
   public:
@@ -104,7 +102,7 @@ class FireEffect : public LEDStripEffect
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -118,9 +116,7 @@ class FireEffect : public LEDStripEffect
         jsonDoc[PTY_REVERSED] = bReversed;
         jsonDoc[PTY_MIRORRED] = bMirrored;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual ~FireEffect()
@@ -245,7 +241,7 @@ public:
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        AllocatedJsonDocument jsonDoc(FireEffect::_jsonSize + 512);
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         FireEffect::SerializeToJSON(root);
@@ -253,9 +249,7 @@ public:
         jsonDoc[PTY_PALETTE] = _palette;
         jsonDoc[PTY_IGNOREGLOBALCOLOR] = _ignoreGlobalColor;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual CRGB GetBlackBodyHeatColor(float temp) const override
@@ -361,7 +355,7 @@ public:
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize + 64> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -370,9 +364,7 @@ public:
         jsonDoc[PTY_REVERSED] = _Reversed;
         jsonDoc[PTY_COOLING] = _Cooling;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     void Draw() override
@@ -525,7 +517,7 @@ public:
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -539,9 +531,8 @@ public:
         jsonDoc["trb"] = _Turbo;
         jsonDoc[PTY_MIRORRED] = _Mirrored;
 
-        assert(!jsonDoc.overflowed());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
 
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
     }
 
     bool Init(std::vector<std::shared_ptr<GFXBase>>& gfx) override
@@ -695,7 +686,7 @@ class BaseFireEffect : public LEDStripEffect
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize + 128> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -709,9 +700,7 @@ class BaseFireEffect : public LEDStripEffect
         jsonDoc[PTY_LEDCOUNT] = LEDCount;
         jsonDoc["clc"] = CellCount;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual CRGB MapHeatToColor(uint8_t temperature)

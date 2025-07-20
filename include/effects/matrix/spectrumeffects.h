@@ -65,16 +65,14 @@ class InsulatorSpectrumEffect : public LEDStripEffect, public BeatEffectBase, pu
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        AllocatedJsonDocument jsonDoc(LEDStripEffect::_jsonSize + 384);
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
         jsonDoc[PTY_PALETTE] = _Palette;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual void Draw() override
@@ -155,7 +153,7 @@ class VUMeter
         const int MAX_FADE = 256;
 
         int xHalf = GFX[0]->width()/2-1;
-        int bars  = g_Analyzer._VURatioFade / 2.0 * xHalf; 
+        int bars  = g_Analyzer._VURatioFade / 2.0 * xHalf;
         bars = min(bars, xHalf);
 
         EraseVUMeter(GFX, bars, yVU);
@@ -184,7 +182,7 @@ class VUMeter
 
 class VUMeterVertical : public VUMeter
 {
-private:    
+private:
     virtual inline void EraseVUMeter(std::vector<std::shared_ptr<GFXBase>> & GFX, int start, int yVU) const
     {
         for (int i = start; i <= GFX[0]->width(); i++)
@@ -208,7 +206,7 @@ public:
         const int MAX_FADE = 256;
 
         int size = GFX[0]->width();
-        int bars  = g_Analyzer._VURatioFade / 2.0 * size; 
+        int bars  = g_Analyzer._VURatioFade / 2.0 * size;
         bars = min(bars, size);
 
         EraseVUMeter(GFX, bars, yVU);
@@ -232,7 +230,7 @@ public:
 
         for (int i = 0; i < bars; i++)
             DrawVUPixels(GFX, i, yVU, i > bars ? 255 : 0, pPalette);
-    }    
+    }
 };
 
 class VUMeterEffect : virtual public VUMeter, public LEDStripEffect
@@ -386,7 +384,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         if (_peak1DecayRate >= 0.0f)
         {
             xOffset = (xOffset - offset + MATRIX_WIDTH) % MATRIX_WIDTH;
-                
+
             if (_peak1DecayRate != _peak2DecayRate)
             {
                 const int PeakFadeTime_ms = 1000;
@@ -398,11 +396,11 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
                 float agePercent = (float) msPeakAge / (float) MS_PER_SECOND;
                 uint8_t fadeAmount = std::min(255.0f, agePercent * 256);
                 colorHighlight.fadeToBlackBy(fadeAmount);
-                pGFXChannel->drawLine(xOffset, max(0, yOffset-1), xOffset + barWidth, max(0, yOffset-1), colorHighlight);
+                pGFXChannel->drawLine(xOffset, max(0, yOffset-1), xOffset + barWidth - 1, max(0, yOffset-1), colorHighlight);
             }
             else
             {
-                pGFXChannel->drawLine(xOffset, max(0, yOffset2-1), xOffset + barWidth, max(0, yOffset2-1), colorHighlight);
+                pGFXChannel->drawLine(xOffset, max(0, yOffset2-1), xOffset + barWidth - 1, max(0, yOffset2-1), colorHighlight);
             }
         }
     }
@@ -468,7 +466,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        AllocatedJsonDocument jsonDoc(LEDStripEffect::_jsonSize + 512);
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -482,9 +480,7 @@ class SpectrumAnalyzerEffect : public LEDStripEffect, virtual public VUMeter
         jsonDoc["pd2"]                 = _peak2DecayRate;
         jsonDoc["scb"]                 = _bScrollBars;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual void Start() override
@@ -576,16 +572,14 @@ class WaveformEffect : public LEDStripEffect
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
         jsonDoc["inc"] = _increment;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     void DrawSpike(int x, float v, bool bErase = true)
@@ -671,7 +665,7 @@ class GhostWave : public WaveformEffect
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -680,14 +674,12 @@ class GhostWave : public WaveformEffect
         jsonDoc[PTY_ERASE] = _erase;
         jsonDoc[PTY_FADE] = _fade;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual bool RequiresDoubleBuffering() const override
     {
-        // MoveOutWardX in the main draw call uses the prior buffer 
+        // MoveOutWardX in the main draw call uses the prior buffer
         return true;
     }
 
@@ -731,9 +723,9 @@ class GhostWave : public WaveformEffect
 
 class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
 {
-    byte _hueIncrement = 0;
-    byte _scrollIncrement = 0;
-    byte _hueStep = 0;
+    uint8_t _hueIncrement = 0;
+    uint8_t _scrollIncrement = 0;
+    uint8_t _hueStep = 0;
 
     void construct()
     {
@@ -742,7 +734,7 @@ class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
 
     public:
 
-    SpectrumBarEffect(const char   * pszFriendlyName, byte hueStep = 16, byte hueIncrement = 4, byte scrollIncrement = 0)
+    SpectrumBarEffect(const char   * pszFriendlyName, uint8_t hueStep = 16, uint8_t hueIncrement = 4, uint8_t scrollIncrement = 0)
         :LEDStripEffect(EFFECT_MATRIX_SPECTRUMBAR, pszFriendlyName),
         _hueIncrement(hueIncrement),
         _scrollIncrement(scrollIncrement),
@@ -760,7 +752,7 @@ class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -769,9 +761,7 @@ class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
         jsonDoc[PTY_DELTAHUE] = _hueIncrement;
         jsonDoc[PTY_HUESTEP]  = _hueStep;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual size_t DesiredFramesPerSecond() const override
@@ -797,12 +787,12 @@ class SpectrumBarEffect : public LEDStripEffect, public BeatEffectBase
         constexpr size_t halfWidth  = MATRIX_WIDTH  / 2;
 
         // We step the hue ever 30ms
-        static byte hue = 0;
+        static uint8_t hue = 0;
         EVERY_N_MILLISECONDS(30)
             hue -= _hueIncrement;
 
         // We scroll the bars ever 50ms
-        static byte offset = 0;
+        static uint8_t offset = 0;
         EVERY_N_MILLISECONDS(100)
             offset += _scrollIncrement;
 
@@ -876,13 +866,12 @@ class AudioSpikeEffect : public LEDStripEffect
 
     virtual bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
 
-        assert(!jsonDoc.overflowed());
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual size_t DesiredFramesPerSecond() const override
@@ -893,21 +882,21 @@ class AudioSpikeEffect : public LEDStripEffect
     virtual void Draw() override
     {
         fadeAllChannelsToBlackBy(50);
-        
+
         static int colorOffset = 0;
         colorOffset+= 4;
 
-        static int offset = 2; 
+        static int offset = 2;
 
         const int16_t * data = g_Analyzer.GetSampleBuffer();
-        int lastY = map(data[offset], 0, 2500, 0, MATRIX_HEIGHT);
+        int lastY = ::map(data[offset], 0, 2500, 0, MATRIX_HEIGHT);
         for (int32_t x = 0; x < MATRIX_WIDTH; ++x)
         {
-            byte y1 = map(data[offset+x], 0, 2500, 0, MATRIX_HEIGHT);
+            uint8_t y1 = ::map(data[offset+x], 0, 2500, 0, MATRIX_HEIGHT);
             CRGB color = ColorFromPalette(spectrumBasicColors, (y1 * 4) + colorOffset, 255, NOBLEND);
             g()->drawLine(x, lastY, x+1, y1, color);
             lastY = y1;
-        }    
+        }
         offset += MATRIX_WIDTH;
         if (offset + MATRIX_WIDTH > g_Analyzer.GetSampleBufferSize())
             offset = 2;

@@ -695,7 +695,7 @@ public:
 
   bool SerializeToJSON(JsonObject& jsonObject) override
   {
-    AllocatedJsonDocument jsonDoc(LEDStripEffect::_jsonSize + 512);
+    auto jsonDoc = CreateJsonDocument();
 
     JsonObject root = jsonDoc.to<JsonObject>();
     LEDStripEffect::SerializeToJSON(root);
@@ -704,9 +704,7 @@ public:
     jsonDoc["rpm"] = _bReplaceMagenta;
     jsonDoc["sch"] = _sparkleChance;
 
-    assert(!jsonDoc.overflowed());
-
-    return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+    return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
   }
 
   void Draw() override
@@ -772,7 +770,7 @@ public:
 
   bool SerializeToJSON(JsonObject& jsonObject) override
   {
-    StaticJsonDocument<LEDStripEffect::_jsonSize> jsonDoc;
+    auto jsonDoc = CreateJsonDocument();
 
     JsonObject root = jsonDoc.to<JsonObject>();
     LEDStripEffect::SerializeToJSON(root);
@@ -780,9 +778,7 @@ public:
     jsonDoc[PTY_ORDER] = to_value(_order);
     jsonDoc["stp"] = _step;
 
-    assert(!jsonDoc.overflowed());
-
-    return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+    return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
   }
 
   void Draw() override
@@ -952,11 +948,11 @@ protected:
   float Cooling;     // Rate at which the pixels cool off
   int Sparks;      // How many sparks will be attempted each frame
   int SparkHeight; // If created, max height for a spark
-  byte Sparking;    // Probability of a spark each attempt
+  uint8_t Sparking;    // Probability of a spark each attempt
   bool bReversed;  // If reversed we draw from 0 outwards
   bool bMirrored;  // If mirrored we split and duplicate the drawing
   bool bMulticolor; // If true each channel spoke will be a different color
-  byte MaxSparkTemp; // How hot a spark can be
+  uint8_t MaxSparkTemp; // How hot a spark can be
 
   PixelOrder Order;
 
@@ -979,14 +975,14 @@ public:
                 int ledCount,
                 int cellsPerLED = 1,
                 float cooling = 20,
-                byte sparking = 100,
+                uint8_t sparking = 100,
                 int sparks = 3,
                 int sparkHeight = 4,
                 PixelOrder order = Sequential,
                 bool breversed = false,
                 bool bmirrored = false,
                 bool bmulticolor = false,
-                byte maxSparkTemp = 255)
+                uint8_t maxSparkTemp = 255)
       : LEDStripEffect(EFFECT_STRIP_FIRE_FAN, "FireFanEffect"),
         Palette(palette),
         LEDCount(ledCount),
@@ -1026,7 +1022,7 @@ public:
 
   bool SerializeToJSON(JsonObject& jsonObject) override
   {
-    AllocatedJsonDocument jsonDoc(LEDStripEffect::_jsonSize + 512);
+    auto jsonDoc = CreateJsonDocument();
 
     JsonObject root = jsonDoc.to<JsonObject>();
     LEDStripEffect::SerializeToJSON(root);
@@ -1044,12 +1040,10 @@ public:
     jsonDoc[PTY_ORDER] = to_value(Order);
     jsonDoc[PTY_MULTICOLOR] = bMulticolor ? 1 : 0;
 
-    assert(!jsonDoc.overflowed());
-
-    return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+    return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
   }
 
-  CRGB GetBlackBodyHeatColorByte(byte temp) const
+  CRGB GetBlackBodyHeatColorByte(uint8_t temp) const
   {
     return ColorFromPalette(Palette, temp, 255);
   }
@@ -1098,7 +1092,7 @@ public:
         if (random(255) < Sparking)
         {
           int y = CellCount() - 1 - random(SparkHeight * CellsPerLED);
-          abHeat[y] = ::min((long)MaxSparkTemp, abHeat[y] + random(0, MaxSparkTemp)); 
+          abHeat[y] = ::min((long)MaxSparkTemp, abHeat[y] + random(0, MaxSparkTemp));
         }
       }
     }
@@ -1381,8 +1375,8 @@ public:
     // Draw four outer pixels in second ring outwards.  We draw 1.05 to take advantage of the non-linear red response in
     // the second pixels (when drawn at 5%, the red will show up more, depending on color correction).
 
-    float xRatio = map(centerX, 0.0f, maxDeviation, -1.0f, 1.0f);
-    float yRatio = map(centerY, 0.0f, maxDeviation, -1.0f, 1.0f);
+    float xRatio = ::map(centerX, 0.0f, maxDeviation, -1.0f, 1.0f);
+    float yRatio = ::map(centerY, 0.0f, maxDeviation, -1.0f, 1.0f);
 
     auto brightness = led_brightness(xRatio, yRatio);
     for (int i = 0; i < 8; i++)

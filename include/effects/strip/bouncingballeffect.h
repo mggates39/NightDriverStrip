@@ -61,6 +61,7 @@ private:
 
     static constexpr float Gravity = -9.81f;
     static constexpr float StartHeight = 1.0f;
+    // Note: VSCode flags sqrt() for calling a non-constexpr builtin function, but it compiles and runs
     static constexpr float ImpactVelocityStart = sqrt(-2.0f * Gravity * StartHeight);
 
     std::vector<double> ClockTimeSinceLastBounce;
@@ -92,7 +93,7 @@ private:
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<LEDStripEffect::_jsonSize + 128> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -102,9 +103,7 @@ private:
         jsonDoc[PTY_MIRORRED] = _bMirrored;
         jsonDoc[PTY_ERASE] = _bErase;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual size_t DesiredFramesPerSecond() const override

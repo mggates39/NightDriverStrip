@@ -131,8 +131,6 @@ class PatternSubscribers : public LEDStripEffect
 
   protected:
 
-    static constexpr int _jsonSize = LEDStripEffect::_jsonSize + 192;
-
     // Create our SettingSpec instances if needed, and return (a pointer to) them
     EffectSettingSpecs* FillSettingSpecs() override
     {
@@ -169,14 +167,14 @@ class PatternSubscribers : public LEDStripEffect
 
     PatternSubscribers(const JsonObjectConst& jsonObject) : LEDStripEffect(jsonObject)
     {
-        if (jsonObject.containsKey("ycg"))
+        if (jsonObject["ycg"].is<String>())
             youtubeChannelGuid = jsonObject["ycg"].as<String>();
 
-        if (jsonObject.containsKey("ycn"))
+        if (jsonObject["ycn"].is<String>())
             youtubeChannelName = jsonObject["ycn"].as<String>();
-        if (jsonObject.containsKey("bgc"))
+        if (jsonObject["bgc"].is<CRGB>())
             backgroundColor = jsonObject["bgc"].as<CRGB>();
-        if (jsonObject.containsKey("boc"))
+        if (jsonObject["boc"].is<CRGB>())
             borderColor = jsonObject["boc"].as<CRGB>();
     }
 
@@ -187,7 +185,7 @@ class PatternSubscribers : public LEDStripEffect
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -197,9 +195,7 @@ class PatternSubscribers : public LEDStripEffect
         jsonDoc["bgc"] = backgroundColor;
         jsonDoc["boc"] = borderColor;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     bool RequiresDoubleBuffering() const override
@@ -256,7 +252,7 @@ class PatternSubscribers : public LEDStripEffect
     // Extension override to serialize our settings on top of those from LEDStripEffect
     bool SerializeSettingsToJSON(JsonObject& jsonObject) override
     {
-        StaticJsonDocument<_jsonSize> jsonDoc;
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeSettingsToJSON(root);
@@ -266,10 +262,7 @@ class PatternSubscribers : public LEDStripEffect
         jsonDoc[NAME_OF(backgroundColor)] = backgroundColor;
         jsonDoc[NAME_OF(borderColor)] = borderColor;
 
-        if (jsonDoc.overflowed())
-            debugE("JSON buffer overflow while serializing settings for PatternSubscribers - object incomplete!");
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     // Extension override to accept our settings on top of those known by LEDStripEffect

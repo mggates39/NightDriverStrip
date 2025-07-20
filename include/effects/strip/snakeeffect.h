@@ -82,7 +82,7 @@ class SnakeEffect : public LEDStripEffect
 
     bool SerializeToJSON(JsonObject& jsonObject) override
     {
-        AllocatedJsonDocument jsonDoc(LEDStripEffect::_jsonSize + 64);
+        auto jsonDoc = CreateJsonDocument();
 
         JsonObject root = jsonDoc.to<JsonObject>();
         LEDStripEffect::SerializeToJSON(root);
@@ -90,9 +90,7 @@ class SnakeEffect : public LEDStripEffect
         jsonDoc[PTY_LEDCOUNT] = LEDCount;
         jsonDoc[PTY_SPEED] = SnakeSpeed;
 
-        assert(!jsonDoc.overflowed());
-
-        return jsonObject.set(jsonDoc.as<JsonObjectConst>());
+        return SetIfNotOverflowed(jsonDoc, jsonObject, __PRETTY_FUNCTION__);
     }
 
     virtual ~SnakeEffect()

@@ -1,6 +1,9 @@
 # NightDriverStrip <!-- omit in toc -->
 
-**DEVELOPERS WANTED!** We are searching for talented React and C++ developers to help out on this project.  Check out the code and if you're interested, contact <davepl@davepl.com>.
+- **Mesmerizer kits**, as demonstrated in [this video](https://youtu.be/COJnlehBcKw) and featured in the background of many other Dave's Garage videos, are now [available for sale on eBay](https://www.ebay.com/itm/335801442651)! (If that listing expires before we update the link, check out [Dave's listings](https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_blrs=recall_filtering&_ssn=davepl&_oac=1); if the kits are available then the listing will be there.)
+- We are searching for **talented React and C++ developers** to help out on this project.  Check out the code and if you're interested, contact <davepl@davepl.com>.
+
+&nbsp;
 
 ![CI](https://github.com/PlummersSoftwareLLC/NightDriverStrip/actions/workflows/CI.yml/badge.svg) ![Release Web Installer build and deploy](https://github.com/PlummersSoftwareLLC/NightDriverStrip/actions/workflows/release.yml/badge.svg)
 
@@ -36,6 +39,7 @@ _Davepl, 9/19/2021_
   - [Build commands](#build-commands)
 - [File system](#file-system)
 - [Tools](#tools)
+- [COM port problems](#com-port-problems)
 - [Bonus exercise](#bonus-exercise)
 - [Super Bonus Exercise](#super-bonus-exercise)
 - [Sample parts (Plummer's Software LLC Amazon affiliate links)](#sample-parts-plummers-software-llc-amazon-affiliate-links)
@@ -189,6 +193,7 @@ Note: Some defines are board specific, this is noted below.
 | TIME_BEFORE_LOCAL     | How many seconds before the lamp times out and shows local content |
 | ENABLE_NTP            | Set the clock from the web                                         |
 | ENABLE_OTA            | Accept over the air flash updates                                  |
+| COLORDATA_SERVER_ENABLED | Turn on the internal color data server; allows TCP clients to receive updates on what's being displayed on the LEDs that the device is driving. |
 
 | Hardware Specific | Description                                         | Supported Boards             |
 | ----------------- | --------------------------------------------------- | ---------------------------- |
@@ -199,13 +204,23 @@ Note: Some defines are board specific, this is noted below.
 | ENABLE_AUDIO      | Listen for audio from the microphone and process it | M5Stick-C and M5Stick-C Plus |
 | ENABLE_REMOTE     | IR Remote Control                                   | Requires IR Hardware         |
 
-example in platformio.ini (prefix the flags with `-D`, e.g. `ENABLE_WIFI=1` becomes `-DENABLE_WIFI=1`)
+<!-- markdownlint-disable MD033 -->
+The webserver, which can be enabled using ENABLE_WEBSERVER as indicated, comes with a number of capabilities that can themselves be enabled or disabled individually. Each of them comes with a default enabled state that depends on the values of other defines. The defaults can be overridden by setting the defines explicitly. Do note that enabling a feature is only sensible if its prerequisites are met - those are the conditions that enable the feature by default.<br>The following table discusses this.
+<!-- markdownlint-enable MD033 -->
+
+| Webserver feature | Description | Enabled by default if... |
+| - | - | - |
+| ENABLE_WEB_UI | Enable the on-board web UI | ENABLE_WEBSERVER is 1 |
+| COLORDATA_WEB_SOCKET_ENABLED | Enable the WebSocket for sending color data to connected web UI clients (browsers); required for the effect preview feature of the web UI | ENABLE_WIFI is 1 and ENABLE_WEBSERVER is 1 and COLORDATA_SERVER_ENABLED is 1 |
+| EFFECTS_WEB_SOCKET_ENABLED | Enable the WebSocket for pushing updates to connected web UI clients (browsers) about effects, both activation state and configuration. | ENABLE_WIFI is 1 and ENABLE_WEBSERVER is 1 |
+
+Example in platformio.ini (prefix the flags with `-D`, e.g. `ENABLE_WIFI=1` becomes `-DENABLE_WIFI=1`):
 
 ```INI
 build_flags = -DENABLE_WIFI=1
 ```
 
-example in globals.h:
+Example in globals.h:
 
 ```C++
 #define ENABLE_WIFI 1
@@ -245,17 +260,9 @@ The effects table is persisted to a JSON file on SPIFFS at regular intervals, to
 
 This makes that an override of `SerializeToJSON()` and a corresponding deserializing constructor must be provided for effects that need (or want) to persist more than the properties that are (de)serialized from/to JSON by `LEDStripEffect` by default.
 
-Throughout the project, the library used for JSON handling and (de)serialization is [ArduinoJson](https://arduinojson.org/). Among others, this means that:
+Throughout the project, the library used for JSON handling and (de)serialization is [ArduinoJson](https://arduinojson.org/). Among others, this means that `SerializeToJSON()` functions _must_ return `true` _except_ when an ArduinoJson function (like `JsonObject::set()`) returns `false` to indicate it ran out of buffer memory.
 
-- in line with the convention in ArduinoJson, `SerializeToJSON()` functions _must_ return `true` _except_ when an ArduinoJson function (like `JsonObject::set()`) returns `false` to indicate it ran out of buffer memory. Any `SerializeToJSON()` function returning `false` will trigger an increase in the overall serialization buffer and a restart of the serialization process.
-- the memory required for an individual class instance's (de)serialization operation needs to be reserved _beforehand_, by creating either:
-
-  - a `StaticJsonDocument<`_buffer size_`>()` that reserves memory on the stack. This can be used for small buffer sizes (smaller than 1024 bytes) only.
-  - an `AllocatedJsonDocument(`_buffer size_`)` that reserves memory on the heap.
-
-  How much memory is actually required depends on the number, type and contents of the (de)serialized properties, and is effectively a bit of a guessing game - which means the values you'll see throughout the codebase are educated guesses as well. When properties that are serialized last fail to show up in the JSON that is generated, it is reasonable to assume the serialization process ran out of buffer memory and that buffer memory thus needs to be increased.
-
-To get a better understanding of the specifics related to JSON (de)serialization, you could consider taking a look at the respective tutorials in the ["First contact" section](https://arduinojson.org/v6/doc/#first-contact) of the ArduinoJson documentation.
+To get a better understanding of the specifics related to JSON (de)serialization, you could consider taking a look at the respective tutorials in the ["First contact" section](https://arduinojson.org/v7/doc/#first-contact) of the ArduinoJson documentation.
 
 ## Resetting the effect list
 
@@ -330,6 +337,12 @@ Instead of:
 cd tools
 ./buddybuild.sh
 ```
+
+## COM port problems
+
+Specifically on the Windows platform, there have been cases where people have experienced problems communicating to the serial port that the ESP32 device is connected to from PlatformIO, usually in the shape of PlatformIO showing messages that the COM port in question doesn't exist where it absolutely did before. This tends to be caused by the COM port being used by another process within PlatformIO (the monitor function being a known cause), or some other application effectively blocking the COM port in question. A confirmed example of the latter is Malwarebytes.
+
+If you experience such difficulties accessing serial ports, the tools in the Sysinternals toolkit (particularly Process Explorer and Portmon, available [from Microsoft](https://learn.microsoft.com/en-us/sysinternals/)) may be helpful towards finding the culprit.
 
 ## Bonus exercise
 
